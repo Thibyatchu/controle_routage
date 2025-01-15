@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Page d'Accueil{% endblock %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('build/app.js') }}">
+{% endblock %}
+
+{% block body %}
+<div class="form-container">
+    <h1>Bienvenue sur la page d'accueil</h1>
+    
+    <p>Sur cette page, vous pouvez importer un fichier CSV ou Excel pour l'afficher sur la page suivante.</p>
+
+    {% for message in app.flashes('error') %}
+        <div class="error-message">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    <form action="{{ path('app_home') }}" method="post" enctype="multipart/form-data">
+        <label for="file">Choisir un fichier (CSV, XLS, XLSX) :</label>
+        <input type="file" name="file" id="file" accept=".csv, .xls, .xlsx" required>
+        <button type="submit">Envoyer le fichier</button>
+    </form>
+
+    <p>Une fois le fichier importé, vous serez redirigé vers la page d'affichage pour visualiser son contenu.</p>
+</div>
+{% endblock %}
