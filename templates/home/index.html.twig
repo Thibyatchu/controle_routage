@@ -3,7 +3,7 @@
 {% block title %}Page d'Accueil{% endblock %}
 
 {% block stylesheets %}
-    <link rel="stylesheet" href="{{ asset('build/app.js') }}">
+    {% include 'theme/link.html.twig' %}
 {% endblock %}
 
 {% block body %}
