@@ -7,23 +7,50 @@
 {% endblock %}
 
 {% block body %}
-<div class="form-container">
-    <h1>Bienvenue sur la page d'accueil</h1>
-    
-    <p>Sur cette page, vous pouvez importer un fichier CSV ou Excel pour l'afficher sur la page suivante.</p>
+<div class="d-flex flex-column flex-center text-center p-10">
+    <!--begin::Wrapper-->
+    <div class="card card-flush w-md-650px py-5">
+        <div class="card-body py-15 py-lg-20">
+            <!--begin::Logo-->
+            <div class="mb-7">
+                <a href="{{ path('app_home') }}" class="">
+                    <img alt="Logo" src="{{ asset('metronic_theme/assets/media/logo/maqprint-logo.png') }}" class="h-100px" />
+                </a>
+            </div>
+            <!--end::Logo-->
+            <!--begin::Title-->
+            <h1 class="fw-bolder text-gray-900 mb-5">Bienvenue sur la page d'accueil</h1>
+            <!--end::Title-->
+            <!--begin::Text-->
+            <div class="fw-semibold fs-6 text-gray-500 mb-7">
+                Sur cette page, vous pouvez importer un fichier CSV ou Excel
+                <br />pour l'afficher sur la page suivante.
+            </div>
+            <!--end::Text-->
+            
+            <!--begin::Form-->
+            <form action="{{ path('app_home') }}" method="post" enctype="multipart/form-data">
+                <label for="file" class="form-label">Choisir un fichier (CSV, XLS, XLSX) :</label>
+                <input type="file" name="file" id="file" accept=".csv, .xls, .xlsx" class="form-control mb-3" required>
+                <button type="submit" class="btn btn-light-primary">Envoyer le fichier</button>
+            </form>
+            <!--end::Form-->
 
-    {% for message in app.flashes('error') %}
-        <div class="error-message">
-            {{ message }}
+            <!--begin::Flash Message-->
+            {% for message in app.flashes('error') %}
+                <div class="error-message mt-4 alert alert-danger">
+                    {{ message }}
+                </div>
+            {% endfor %}
+            <!--end::Flash Message-->
+            
+            <!--begin::Redirect Info-->
+            <p class="fw-semibold fs-6 text-gray-500 mb-7 mt-5">
+                Une fois le fichier importé, vous serez redirigé vers la page d'affichage pour visualiser son contenu.
+            </p>
+            <!--end::Redirect Info-->
         </div>
-    {% endfor %}
-
-    <form action="{{ path('app_home') }}" method="post" enctype="multipart/form-data">
-        <label for="file">Choisir un fichier (CSV, XLS, XLSX) :</label>
-        <input type="file" name="file" id="file" accept=".csv, .xls, .xlsx" required>
-        <button type="submit">Envoyer le fichier</button>
-    </form>
-
-    <p>Une fois le fichier importé, vous serez redirigé vers la page d'affichage pour visualiser son contenu.</p>
+    </div>
+    <!--end::Wrapper-->
 </div>
 {% endblock %}

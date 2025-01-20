@@ -8,124 +8,128 @@
 
 {% block body %}
 <div class="container">
-    <h1>Affichage des données du fichier</h1>
+    <h1 class="my-4">Affichage des données du fichier</h1>
 
     <!-- Formulaire pour ignorer les premières lignes -->
-    <form action="{{ path('display') }}" method="get">
-        <label for="ignore_first_rows">Ignorer des lignes :</label><br>
-        <input type="radio" id="ignore_first_rows_none" name="ignore_first_rows" value="none" {% if ignore_first_rows == 'none' %}checked{% endif %}>
-        <label for="ignore_first_rows_none">Aucune ligne</label><br>
-
-        <input type="radio" id="ignore_first_rows_one" name="ignore_first_rows" value="one" {% if ignore_first_rows == 'one' %}checked{% endif %}>
-        <label for="ignore_first_rows_one">Ignorer la première ligne</label><br>
-
-        <input type="radio" id="ignore_first_rows_two" name="ignore_first_rows" value="two" {% if ignore_first_rows == 'two' %}checked{% endif %}>
-        <label for="ignore_first_rows_two">Ignorer les deux premières lignes</label><br>
-
-        <button type="submit">Appliquer</button>
+    <form action="{{ path('display') }}" method="get" class="mb-4">
+        <div class="mb-3">
+            <label for="ignore_first_rows" class="form-label">Ignorer des lignes ?</label><br>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" id="ignore_first_rows_none" name="ignore_first_rows" value="none" {% if ignore_first_rows == 'none' %}checked{% endif %}>
+                <label class="form-check-label" for="ignore_first_rows_none">Aucune ligne</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" id="ignore_first_rows_one" name="ignore_first_rows" value="one" {% if ignore_first_rows == 'one' %}checked{% endif %}>
+                <label class="form-check-label" for="ignore_first_rows_one">Ignorer la première ligne</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" id="ignore_first_rows_two" name="ignore_first_rows" value="two" {% if ignore_first_rows == 'two' %}checked{% endif %}>
+                <label class="form-check-label" for="ignore_first_rows_two">Ignorer les deux premières lignes</label>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-light-primary">Appliquer</button>
     </form>
 
     <!-- Tableau des données -->
-    <table>
-        <thead>
-            <tr>
-                {% for letter in colLetters %}
-                    <th>{{ letter }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in data %}
-                <tr>
-                    {% for cell in row %}
-                        <td>{{ cell }}</td>
+    <div class="table-responsive">
+        <table id="kt_datatable_horizontal_scroll" class="table table-striped table-row-bordered gy-5 gs-7">
+            <thead>
+                <tr class="fw-semibold fs-6 text-gray-800">
+                    {% for letter in colLetters %}
+                        <th>{{ letter }}</th>
                     {% endfor %}
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                    <tr>
+                        {% for cell in row %}
+                            <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-    <form action="{{ path('app_home') }}" method="get">
-        <button class="radio-form button" type="submit">Retour à l'Accueil</button>
+    <!-- Bouton de retour -->
+    <form action="{{ path('app_home') }}" method="get" class="mt-4">
+        <button class="btn btn-light-warning" type="submit">Retour à l'Accueil</button>
     </form>
 
     <!-- Listes déroulantes pour sélectionner des colonnes -->
-    <div class="form-container">
+    <div class="mt-5">
         <h3>Filtres</h3>
         <form action="" method="post">
-            <div>
-                <label for="raison_social">Raison Sociale :</label>
-                <select id="raison_social" name="raison_social">
-                    {% for letter in colLetters %}
-                        <option value="{{ letter }}">{{ letter }}</option>
-                    {% endfor %}
-                </select>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="raison_social" class="form-label">Raison Sociale :</label>
+                    <select class="form-select form-select-sm form-select-solid" data-control="select2" data-close-on-select="false"  data-placeholder="Select an option" data-allow-clear="true">
+                        {% for letter in colLetters %}
+                            <option value="{{ letter }}">{{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="civilite_nom_prenom" class="form-label">Civilité, Nom, Prénom :</label>
+                    <select class="form-select form-select-sm form-select-solid" data-control="select2" data-close-on-select="false" data-placeholder="Select an option" data-allow-clear="true" multiple="multiple">
+                        {% for letter in colLetters %}
+                            <option value="{{ letter }}">{{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="adresse_1" class="form-label">Adresse 1 :</label>
+                    <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        {% for letter in colLetters %}
+                            <option value="{{ letter }}">{{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="adresse_2" class="form-label">Adresse 2 :</label>
+                    <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        {% for letter in colLetters %}
+                            <option value="{{ letter }}">{{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="adresse_3" class="form-label">Adresse 3 :</label>
+                    <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        {% for letter in colLetters %}
+                            <option value="{{ letter }}">{{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="code_postal" class="form-label">Code Postal :</label>
+                    <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        {% for letter in colLetters %}
+                            <option value="{{ letter }}">{{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="ville" class="form-label">Ville :</label>
+                    <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        {% for letter in colLetters %}
+                            <option value="{{ letter }}">{{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="pays" class="form-label">Pays :</label>
+                    <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        {% for letter in colLetters %}
+                            <option value="{{ letter }}">{{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
-
-            <div>
-                <label for="civilite_nom_prenom">Civilité, Nom, Prénom :</label>
-                <select id="civilite_nom_prenom" name="civilite_nom_prenom[]" multiple>
-                    {% for letter in colLetters %}
-                        <option value="{{ letter }}">{{ letter }}</option>
-                    {% endfor %}
-                </select>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-light-primary">Appliquer les filtres</button>
             </div>
-
-            <div>
-                <label for="adresse_1">Adresse 1 :</label>
-                <select id="adresse_1" name="adresse_1">
-                    {% for letter in colLetters %}
-                        <option value="{{ letter }}">{{ letter }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label for="adresse_2">Adresse 2 :</label>
-                <select id="adresse_2" name="adresse_2">
-                    {% for letter in colLetters %}
-                        <option value="{{ letter }}">{{ letter }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label for="adresse_3">Adresse 3 :</label>
-                <select id="adresse_3" name="adresse_3">
-                    {% for letter in colLetters %}
-                        <option value="{{ letter }}">{{ letter }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label for="code_postal">Code Postal :</label>
-                <select id="code_postal" name="code_postal">
-                    {% for letter in colLetters %}
-                        <option value="{{ letter }}">{{ letter }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label for="ville">Ville :</label>
-                <select id="ville" name="ville">
-                    {% for letter in colLetters %}
-                        <option value="{{ letter }}">{{ letter }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label for="pays">Pays :</label>
-                <select id="pays" name="pays">
-                    {% for letter in colLetters %}
-                        <option value="{{ letter }}">{{ letter }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <button type="submit">Appliquer les filtres</button>
         </form>
     </div>
 </div>
