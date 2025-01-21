@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Résultat{% endblock %}
+
+{% block stylesheets %}
+    {% include 'theme/link.html.twig' %}
+{% endblock %}
+
+{% block body %}
+
+<form action="{{ path('app_display') }}" method="get" class="mt-4">
+    <button class="btn btn-light-warning" type="submit">Retour à l'Affichage</button>
+</form>
+{% endblock %}

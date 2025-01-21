@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Affichage des données{% endblock %}
+{% block title %}Afficher{% endblock %}
 
 {% block stylesheets %}
     {% include 'theme/link.html.twig' %}
@@ -11,7 +11,7 @@
     <h1 class="my-4">Affichage des données du fichier</h1>
 
     <!-- Formulaire pour ignorer les premières lignes -->
-    <form action="{{ path('display') }}" method="get" class="mb-4">
+    <form action="{{ path('app_display') }}" method="get" class="mb-4">
         <div class="mb-3">
             <label for="ignore_first_rows" class="form-label">Ignorer des lignes ?</label><br>
             <div class="form-check">
@@ -60,7 +60,7 @@
     <!-- Listes déroulantes pour sélectionner des colonnes -->
     <div class="mt-5">
         <h3>Filtres</h3>
-        <form action="" method="post">
+        <form action="{{ path('app_treatment') }}" method="post">
             <div class="row g-3">
                 <div class="col-md-4">
                     <label for="raison_social" class="form-label">Raison Sociale :</label>

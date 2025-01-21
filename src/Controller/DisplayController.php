@@ -9,7 +9,7 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class DisplayController extends AbstractController
 {
-    #[Route('/display', name: 'display')]
+    #[Route('/display', name: 'app_display')]
     public function index(Request $request): Response
     {
         // Récupérer les données de la session

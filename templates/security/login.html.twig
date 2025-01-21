@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Log in!{% endblock %}
+{% block title %}Se connecter{% endblock %}
 
 {% block stylesheets %}
     {% include 'theme/link.html.twig' %}
@@ -14,7 +14,11 @@
             <div class="d-flex flex-center flex-column flex-lg-row-fluid">
                 <div class="w-lg-500px p-10">
                     <!--begin::Form-->
-                    <form method="post" class="form w-100" novalidate="novalidate" id="kt_sign_in_form">
+                    <form method="post" class="form w-100" novalidate="novalidate" id="kt_sign_in_form" data-kt-redirect-url="home">
+                        <div class="text-center mb-11">
+                            <h1 class="text-gray-900 fw-bolder mb-3">Sign In</h1>
+                            <div class="text-gray-500 fw-semibold fs-6">Log in to get started</div>
+                        </div>
                         {% if error %}
                             <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
                         {% endif %}
@@ -48,6 +52,10 @@
                             </button>
                         </div>
                         <!--end::Submit button-->
+
+                        <div class="text-gray-500 text-center fw-semibold fs-6">Not a Member yet? 
+                            <a href="{{ path('app_logup') }}" class="link-primary">Sign up</a>
+                        </div>
                     </form>
                     <!--end::Form-->
                 </div>
@@ -57,6 +65,7 @@
     </div>
 </div>
 {% endblock %}
+
 {% block javascripts %}
     {% include 'theme/script.html.twig' %}
 {% endblock %}

@@ -48,7 +48,7 @@ class HomeController extends AbstractController
             $session->set('spreadsheet_data', $data);
 
             // Rediriger vers la page d'affichage
-            return $this->redirectToRoute('display');
+            return $this->redirectToRoute('app_display');
         }
 
         return $this->render('home/index.html.twig');

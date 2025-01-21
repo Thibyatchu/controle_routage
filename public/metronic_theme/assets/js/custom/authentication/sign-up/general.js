@@ -15,20 +15,6 @@ var KTSignupGeneral = function () {
             form,
             {
                 fields: {
-                    'first-name': {
-                        validators: {
-                            notEmpty: {
-                                message: 'First Name is required'
-                            }
-                        }
-                    },
-                    'last-name': {
-                        validators: {
-                            notEmpty: {
-                                message: 'Last Name is required'
-                            }
-                        }
-                    },
                     'email': {
                         validators: {
                             regexp: {
@@ -65,13 +51,6 @@ var KTSignupGeneral = function () {
                                     return form.querySelector('[name="password"]').value;
                                 },
                                 message: 'The password and its confirm are not the same'
-                            }
-                        }
-                    },
-                    'toc': {
-                        validators: {
-                            notEmpty: {
-                                message: 'You must accept the terms and conditions'
                             }
                         }
                     }
@@ -167,13 +146,6 @@ var KTSignupGeneral = function () {
             form,
             {
                 fields: {
-                    'name': {
-                        validators: {
-                            notEmpty: {
-                                message: 'Name is required'
-                            }
-                        }
-                    },
                     'email': {
                         validators: {
                             regexp: {
@@ -210,13 +182,6 @@ var KTSignupGeneral = function () {
                                     return form.querySelector('[name="password"]').value;
                                 },
                                 message: 'The password and its confirm are not the same'
-                            }
-                        }
-                    },
-                    'toc': {
-                        validators: {
-                            notEmpty: {
-                                message: 'You must accept the terms and conditions'
                             }
                         }
                     }
