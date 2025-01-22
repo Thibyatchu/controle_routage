@@ -10,6 +10,13 @@
 <div class="container">
     <h1 class="my-4">Affichage des données du fichier</h1>
 
+    <!-- Affichage des messages d'erreur (flash) -->
+    {% for message in app.flashes('error') %}
+        <div class="error-message mt-4 alert alert-danger">
+            {{ message }}
+        </div>
+    {% endfor %}
+
     <!-- Formulaire pour ignorer les premières lignes -->
     <form action="{{ path('app_display') }}" method="get" class="mb-4">
         <div class="mb-3">
@@ -63,15 +70,16 @@
         <form action="{{ path('app_treatment') }}" method="post">
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label for="raison_social" class="form-label">Raison Sociale :</label>
+                    <label for="raison_social" class="form-label">Raison Sociale</label>
                     <select class="form-select form-select-sm form-select-solid" data-control="select2" data-close-on-select="false"  data-placeholder="Select an option" data-allow-clear="true">
+                        <option value=""></option>
                         {% for letter in colLetters %}
                             <option value="{{ letter }}">{{ letter }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="civilite_nom_prenom" class="form-label">Civilité, Nom, Prénom :</label>
+                    <label for="civilite_nom_prenom" class="form-label">Civilité, Nom, Prénom</label>
                     <select class="form-select form-select-sm form-select-solid" data-control="select2" data-close-on-select="false" data-placeholder="Select an option" data-allow-clear="true" multiple="multiple">
                         {% for letter in colLetters %}
                             <option value="{{ letter }}">{{ letter }}</option>
@@ -79,55 +87,64 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="adresse_1" class="form-label">Adresse 1 :</label>
+                    <label for="adresse_1" class="form-label">Adresse 1</label>
                     <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        <option value=""></option>
                         {% for letter in colLetters %}
                             <option value="{{ letter }}">{{ letter }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="adresse_2" class="form-label">Adresse 2 :</label>
+                    <label for="adresse_2" class="form-label">Adresse 2</label>
                     <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        <option value=""></option>
                         {% for letter in colLetters %}
                             <option value="{{ letter }}">{{ letter }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="adresse_3" class="form-label">Adresse 3 :</label>
+                    <label for="adresse_3" class="form-label">Adresse 3</label>
                     <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        <option value=""></option>
                         {% for letter in colLetters %}
                             <option value="{{ letter }}">{{ letter }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="code_postal" class="form-label">Code Postal :</label>
+                    <label for="code_postal" class="form-label">Code Postal</label>
                     <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        <option value=""></option>
                         {% for letter in colLetters %}
                             <option value="{{ letter }}">{{ letter }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="ville" class="form-label">Ville :</label>
+                    <label for="ville" class="form-label">Ville</label>
                     <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        <option value=""></option>
                         {% for letter in colLetters %}
                             <option value="{{ letter }}">{{ letter }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label for="pays" class="form-label">Pays :</label>
+                    <label for="pays" class="form-label">Pays</label>
                     <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
+                        <option value=""></option>
                         {% for letter in colLetters %}
                             <option value="{{ letter }}">{{ letter }}</option>
                         {% endfor %}
                     </select>
                 </div>
-            </div>
+                       </div>
             <div class="mt-3">
+                <input type="hidden" name="selected_columns" value="{{ selected_columns|join(',') }}">
+                <input type="hidden" name="filtered_data" value="{{ data|json_encode }}">
+
                 <button type="submit" class="btn btn-light-primary">Appliquer les filtres</button>
             </div>
         </form>
