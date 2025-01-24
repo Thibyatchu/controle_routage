@@ -1,0 +1,9 @@
+actor: ApiTester
+suite_namespace: Tests\Api
+modules:
+    # enable helpers as array
+    enabled:
+        - REST:
+            depends: PhpBrowser
+            url: http://filamentgestion_php:80/api
+            shortDebugResponse: 300

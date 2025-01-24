@@ -31,6 +31,13 @@ services:
       - target: 443
         published: ${HTTP3_PORT:-443}
         protocol: udp
+  selenium:
+        container_name: selenium
+        image: selenium/standalone-chromium
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        volumes:
+            - '/dev/shm:/dev/shm'
 
 # Mercure is installed as a Caddy module, prevent the Flex recipe from installing another service
 ###> symfony/mercure-bundle ###

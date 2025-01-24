@@ -1,49 +1,46 @@
 <?php
 
 // src/Controller/TreatmentController.php
+
 namespace App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use App\Service\FileService;
 
 class TreatmentController extends AbstractController
 {
     private $fileService;
 
-    // Injection du service FileService
     public function __construct(FileService $fileService)
     {
         $this->fileService = $fileService;
     }
 
     #[Route('/treatment', name: 'app_treatment')]
-    public function index(Request $request, FileService $fileService): Response
+    public function index(Request $request): Response
     {
-        // Récupérer les colonnes sélectionnées et les données filtrées
-        $selectedColumns = $request->get('selected_columns', '');
+        $selectedColumns = $request->get('selected_columns', []);
         $filteredData = $request->get('filtered_data', []);
-    
-        // Convertir les colonnes en tableau si nécessaire
-        if (is_string($selectedColumns)) {
-            $selectedColumns = explode(',', $selectedColumns);
+
+        // Vérification de la validité des données et des colonnes sélectionnées
+        if (empty($selectedColumns) || empty($filteredData)) {
+            $this->addFlash('error', 'Aucune donnée ou colonne sélectionnée.');
+            return $this->redirectToRoute('app_display');
         }
-    
-        // Vérifier que les données sont au bon format
-        if (!is_array($selectedColumns) || !is_array($filteredData)) {
-            $this->addFlash('error', 'Les données ou colonnes sélectionnées ne sont pas valides.');
-            return $this->redirectToRoute('app_display');  // Rediriger vers la page d'affichage
-        }
-    
-        // Appeler le service pour traiter les données
-        $filteredDataByColumns = $fileService->filterDataByColumns($filteredData, $selectedColumns);
-    
-        // Retourner la vue
-        return $this->render('treatment/index.html.twig', [
-            'selected_columns' => $selectedColumns,
-            'filtered_data' => $filteredDataByColumns,
+
+        // Préparer les données pour le CSV
+        $csvData = $this->fileService->prepareCsvData($selectedColumns, $filteredData);
+
+        // Générer le fichier CSV
+        $csvContent = $this->fileService->generateCsvFromData($csvData);
+
+        // Créer la réponse de téléchargement
+        return new Response($csvContent, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="filtered_data.csv"',
         ]);
     }
 }

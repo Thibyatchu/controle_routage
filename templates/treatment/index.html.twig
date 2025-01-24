@@ -8,34 +8,38 @@
 
 {% block body %}
 
-<h2>Les données filtrées</h2>
+    <h2>Les données filtrées</h2>
 
-{% if filtered_data is not empty and selected_columns is not empty %}
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                {% for col in selected_columns %}
-                    <th>{{ col }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in filtered_data %}
+    {% if filtered_data is not empty and selected_columns is not empty %}
+        <table class="table table-striped">
+            <thead>
                 <tr>
-                    {% for cell in row %}
-                        <td>{{ cell }}</td>
+                    {% for letter in selected_columns %}
+                        <th>{{ letter }}</th>
                     {% endfor %}
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-{% else %}
-    <p>Aucune donnée à afficher.</p>
-{% endif %}
+            </thead>
+            <tbody>
+                {% for row in filtered_data %}
+                    <tr>
+                        {% for cell in row %}
+                            <td>{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Aucune donnée correspondant aux colonnes sélectionnées : {{ selected_columns|join(', ') }}.</p>
+    {% endif %}
 
+    <form action="{{ path('app_treatment') }}" method="post" class="mt-4">
+        <input type="hidden" name="filtered_data" value="{{ filtered_data|json_encode }}">
+        <button class="btn btn-light-primary" type="submit">Télécharger les données</button>
+    </form>
 
-<form action="{{ path('app_display') }}" method="get" class="mt-4">
-    <button class="btn btn-light-warning" type="submit">Retour à l'Affichage</button>
-</form>
+    <form action="{{ path('app_display') }}" method="get" class="mt-4">
+        <button class="btn btn-light-warning" type="submit">Retour à l'Affichage</button>
+    </form>
 
 {% endblock %}

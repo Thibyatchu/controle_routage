@@ -96,13 +96,6 @@ class FileService
         return $filteredData;
     }
 
-    /**
-     * Filtrer les données pour ne conserver que les colonnes sélectionnées.
-     *
-     * @param array $data Les données à filtrer.
-     * @param array $selectedColumns Les colonnes sélectionnées (indices).
-     * @return array Les données filtrées.
-     */
     public function filterDataByColumns(array $data, array $selectedColumns): array
     {
         return array_map(function ($row) use ($selectedColumns) {
@@ -110,5 +103,89 @@ class FileService
                 return in_array($key, $selectedColumns);
             }, ARRAY_FILTER_USE_KEY);
         }, $data);
+    }
+
+    public function generateCsvFromFilteredData(array $filteredData, array $selectedColumns): string
+    {
+        $handle = fopen('php://temp', 'r+');
+
+        // Ajouter les en-têtes
+        fputcsv($handle, $selectedColumns);
+
+        // Ajouter les données filtrées
+        foreach ($filteredData as $row) {
+            fputcsv($handle, $row);
+        }
+
+        rewind($handle);
+        $csvContent = stream_get_contents($handle);
+        fclose($handle);
+
+        return $csvContent;
+    }
+
+    public function validateAndConvertColumns($selectedColumns): array
+    {
+        // Convertir les colonnes en tableau si c'est une chaîne de caractères
+        if (is_string($selectedColumns)) {
+            $selectedColumns = explode(',', $selectedColumns);
+        }
+
+        return $selectedColumns;
+    }
+
+    public function generateCsvFromData(array $data): string
+    {
+        $csvContent = '';
+        
+        // En-têtes du CSV
+        $headers = array_keys($data[0]); // Les clés du premier élément sont les en-têtes
+        $csvContent .= implode(';', $headers) . "\n";
+    
+        // Données
+        foreach ($data as $row) {
+            $csvContent .= implode(';', $row) . "\n";
+        }
+        
+        return $csvContent;
+    }    
+
+    public function prepareCsvData(array $selectedColumns, array $filteredData): array
+    {
+        $csvData = [];
+        
+        // Traiter les colonnes sélectionnées et les organiser
+        foreach ($selectedColumns as $columnTitle => $columnLetter) {
+            if ($columnLetter) {
+                if ($columnTitle === 'Civilité, Nom, Prénom') {
+                    // Si c'est la liste multiple, on sépare les colonnes pour chaque sélection
+                    $letters = explode(',', $columnLetter); // Ex: ['A', 'B', 'C']
+                    foreach ($letters as $index => $letter) {
+                        // Si c'est la première, on met le titre, sinon on laisse l'en-tête vide
+                        $csvData[0][$columnTitle . ($index > 0 ? ' - ' . ($index + 1) : '')] = $letter;
+                    }
+                } else {
+                    // Pour les autres, on récupère la donnée et on l'ajoute au CSV
+                    $csvData[0][$columnTitle] = $columnLetter;
+                }
+            } else {
+                // Si la colonne n'a pas été sélectionnée, on ajoute une colonne vide
+                $csvData[0][$columnTitle] = '';
+            }
+        }
+
+        // Ajouter les données dans les bonnes colonnes (par lettre de colonne)
+        foreach ($filteredData as $rowIndex => $row) {
+            foreach ($selectedColumns as $columnTitle => $columnLetter) {
+                // Assure-toi de l'indexation correcte
+                $columnIndex = array_search($columnLetter, array_column($filteredData[0], 0)); // Trouver l'indice de la colonne
+                if (isset($row[$columnIndex])) {
+                    $csvData[$rowIndex + 1][$columnTitle] = $row[$columnIndex];
+                } else {
+                    $csvData[$rowIndex + 1][$columnTitle] = ''; // Ajouter une cellule vide si aucune donnée n'est présente
+                }
+            }
+        }
+        return $csvData;
     }
 }
