@@ -11,20 +11,12 @@ use App\Service\FileService;
 
 class DisplayController extends AbstractController
 {
-    private $fileService;
-
-    // Injection du service FileService
-    public function __construct(FileService $fileService)
-    {
-        $this->fileService = $fileService;
-    }
-
     #[Route('/display', name: 'app_display')]
-    public function index(Request $request): Response
+    public function index(Request $request, FileService $fileService): Response
     {
         // Récupérer les données de la session
         $session = $request->getSession();
-        $data = $this->fileService->getDataFromSession($session);
+        $data = $fileService->getDataFromSession($session);
 
         // Si aucune donnée n'est trouvée
         if (empty($data)) {
@@ -40,7 +32,7 @@ class DisplayController extends AbstractController
         $ignoreFirstRows = $request->get('ignore_first_rows', 'none');
 
         // Traiter les données selon l'option d'ignorance des lignes
-        $data = $this->fileService->processDataWithIgnoreOption($data, $ignoreFirstRows);
+        $data = $fileService->processDataWithIgnoreOption($data, $ignoreFirstRows);
 
         // Trouver le nombre de colonnes maximum
         $maxColumns = max(array_map('count', $data));
@@ -51,13 +43,13 @@ class DisplayController extends AbstractController
         }
 
         // Générer les lettres des colonnes dynamiquement (A, B, C, ..., Z, AA, AB, ...)
-        $colLetters = $this->fileService->getColumnLetters($maxColumns);
+        $colLetters = $fileService->getColumnLetters($maxColumns);
 
         // Récupérer les colonnes sélectionnées par l'utilisateur
         $selectedColumns = $request->get('selected_columns', []);
 
         // Filtrer les données en fonction des colonnes sélectionnées
-        $filteredData = $this->fileService->filterDataBySelectedColumns($data, $selectedColumns);
+        $filteredData = $fileService->filterDataBySelectedColumns($data, $selectedColumns);
 
         return $this->render('display/index.html.twig', [
             'data' => $filteredData,  // Afficher les données filtrées

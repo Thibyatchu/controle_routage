@@ -20,9 +20,7 @@
         <!-- Formulaire pour ignorer les premières lignes -->
         <form action="{{ path('app_display') }}" method="get" class="mb-4">
             <div class="mb-3">
-                <div for="ignore_first_rows" class="form-label">
-                    <label>Ignorer des lignes ?</label>
-                </div>
+                <p for="ignore_first_rows" class="form-label">Ignorer des lignes ?</p>
                 <div class="form-check">
                     <input class="form-check-input" type="radio" id="ignore_first_rows_none" name="ignore_first_rows" value="none" {% if ignore_first_rows == 'none' %}checked{% endif %}>
                     <label class="form-check-label" for="ignore_first_rows_none">Aucune ligne</label>
@@ -67,102 +65,6 @@
         </form>
 
         <!-- Listes déroulantes pour sélectionner des colonnes -->
-        <div class="mt-5">
-            <h3>Filtres</h3>
-            <form action="{{ path('app_treatment') }}" method="post">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <div  for="raison_social" class="form-label">
-                            <label>Raison Sociale</label>
-                        </div>
-                        <select class="form-select form-select-sm form-select-solid" data-control="select2" data-close-on-select="false"  data-placeholder="Select an option" data-allow-clear="true">
-                            <option value=""></option>
-                            {% for letter in colLetters %}
-                                <option value="{{ letter }}">{{ letter }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <div for="civilite_nom_prenom" class="form-label">
-                            <label>Civilité, Nom, Prénom</label>
-                        </div>
-                        <select class="form-select form-select-sm form-select-solid" data-control="select2" data-close-on-select="false" data-placeholder="Select an option" data-allow-clear="true" multiple="multiple">
-                            {% for letter in colLetters %}
-                                <option value="{{ letter }}">{{ letter }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <div for="adresse_1" class="form-label">
-                            <label>Adresse 1</label>
-                        </div>
-                        <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
-                            <option value=""></option>
-                            {% for letter in colLetters %}
-                                <option value="{{ letter }}">{{ letter }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <div for="adresse_2" class="form-label">
-                            <label>Adresse 2</label>
-                        </div>
-                        <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
-                            <option value=""></option>
-                            {% for letter in colLetters %}
-                                <option value="{{ letter }}">{{ letter }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <div for="adresse_3" class="form-label">
-                            <label>Adresse 3</label>
-                        </div>
-                        <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
-                            <option value=""></option>
-                            {% for letter in colLetters %}
-                                <option value="{{ letter }}">{{ letter }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <div for="code_postal" class="form-label">
-                            <label>Code Postal</label>
-                        </div>
-                        <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
-                            <option value=""></option>
-                            {% for letter in colLetters %}
-                                <option value="{{ letter }}">{{ letter }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <div for="ville" class="form-label">
-                            <label>Ville</label>
-                        </div>
-                        <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
-                            <option value=""></option>
-                            {% for letter in colLetters %}
-                                <option value="{{ letter }}">{{ letter }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <div for="pays" class="form-label">
-                            <label>Pays</label>
-                        </div>
-                        <select class="form-select form-select-sm form-select-solid" data-control="select2" data-placeholder="Select an option" data-allow-clear="true">
-                            <option value=""></option>
-                            {% for letter in colLetters %}
-                                <option value="{{ letter }}">{{ letter }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                        </div>
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-light-primary">Appliquer les filtres</button>
-                </div>
-            </form>
-        </div>
+        {% include 'display/filters_dropdowns.html.twig' %}
     </div>
 {% endblock %}

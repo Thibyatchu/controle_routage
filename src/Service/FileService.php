@@ -9,6 +9,9 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class FileService
 {
+    /**
+    * Valide l'extension du fichier uploadé (CSV, XLS, ou XLSX uniquement).
+    */
     public function validateFileExtension(UploadedFile $file): bool
     {
         $fileExtension = strtolower($file->getClientOriginalExtension());
@@ -17,6 +20,9 @@ class FileService
         return in_array($fileExtension, $validExtensions);
     }
 
+    /**
+    * Charge les données d'un fichier Excel ou CSV dans un tableau PHP.
+    */
     public function loadSpreadsheetData($filePath): array
     {
         $spreadsheet = IOFactory::load($filePath);
@@ -33,16 +39,25 @@ class FileService
         return $data;
     }
 
+    /**
+    * Stocke les données d'un fichier dans une session.
+    */
     public function storeDataInSession(array $data, SessionInterface $session)
     {
         $session->set('spreadsheet_data', $data);
     }
 
+    /**
+    * Récupère les données du fichier stockées dans la session.
+    */
     public function getDataFromSession(SessionInterface $session): array
     {
         return $session->get('spreadsheet_data', []);
     }
 
+    /**
+    * Traite les données en ignorant un nombre de lignes définies au début.
+    */
     public function processDataWithIgnoreOption(array $data, string $ignoreFirstRows): array
     {
         // Si l'utilisateur souhaite ignorer des lignes
@@ -58,6 +73,9 @@ class FileService
         }
     }
 
+    /**
+    * Génère une liste des lettres de colonnes (A-Z, AA-ZZ, etc.).
+    */
     public function getColumnLetters(int $maxColumns): array
     {
         $colLetters = [];
@@ -76,6 +94,9 @@ class FileService
         return $colLetters;
     }
 
+    /**
+    * Filtre les données selon les colonnes sélectionnées (par lettre de colonne).
+    */
     public function filterDataBySelectedColumns(array $data, array $selectedColumns): array
     {
         $filteredData = [];
@@ -96,6 +117,9 @@ class FileService
         return $filteredData;
     }
 
+    /**
+    * Filtre les données selon les colonnes sélectionnées en utilisant leur clé.
+    */
     public function filterDataByColumns(array $data, array $selectedColumns): array
     {
         return array_map(function ($row) use ($selectedColumns) {
@@ -105,6 +129,9 @@ class FileService
         }, $data);
     }
 
+    /**
+    * Génère un fichier CSV à partir des données filtrées.
+    */
     public function generateCsvFromFilteredData(array $filteredData, array $selectedColumns): string
     {
         $handle = fopen('php://temp', 'r+');
@@ -124,16 +151,22 @@ class FileService
         return $csvContent;
     }
 
-    public function validateAndConvertColumns($selectedColumns): array
-    {
+    /**
+    * Valide et convertit les colonnes sélectionnées en tableau.
+    */
+    //public function validateAndConvertColumns($selectedColumns): array
+    //{
         // Convertir les colonnes en tableau si c'est une chaîne de caractères
-        if (is_string($selectedColumns)) {
-            $selectedColumns = explode(',', $selectedColumns);
-        }
+    //    if (is_string($selectedColumns)) {
+    //        $selectedColumns = explode(',', $selectedColumns);
+    //    }
 
-        return $selectedColumns;
-    }
+    //    return $selectedColumns;
+    //}
 
+    /**
+    * Génère un fichier CSV à partir de données brutes.
+    */
     public function generateCsvFromData(array $data): string
     {
         $csvContent = '';
@@ -150,39 +183,42 @@ class FileService
         return $csvContent;
     }    
 
+    /**
+    * Prépare les données du CSV selon les colonnes sélectionnées et les filtre.
+    */
     public function prepareCsvData(array $selectedColumns, array $filteredData): array
     {
         $csvData = [];
         
         // Traiter les colonnes sélectionnées et les organiser
-        foreach ($selectedColumns as $columnTitle => $columnLetter) {
-            if ($columnLetter) {
-                if ($columnTitle === 'Civilité, Nom, Prénom') {
+        foreach ($selectedColumns as $colTitle => $colLetters) {
+            if ($colLetters) {
+                if ($colTitle === 'Civilité, Nom, Prénom') {
                     // Si c'est la liste multiple, on sépare les colonnes pour chaque sélection
-                    $letters = explode(',', $columnLetter); // Ex: ['A', 'B', 'C']
+                    $letters = explode(',', $colLetters); // Ex: ['A', 'B', 'C']
                     foreach ($letters as $index => $letter) {
                         // Si c'est la première, on met le titre, sinon on laisse l'en-tête vide
-                        $csvData[0][$columnTitle . ($index > 0 ? ' - ' . ($index + 1) : '')] = $letter;
+                        $csvData[0][$colTitle . ($index > 0 ? ' - ' . ($index + 1) : '')] = $letter;
                     }
                 } else {
                     // Pour les autres, on récupère la donnée et on l'ajoute au CSV
-                    $csvData[0][$columnTitle] = $columnLetter;
+                    $csvData[0][$colTitle] = $colLetters;
                 }
             } else {
                 // Si la colonne n'a pas été sélectionnée, on ajoute une colonne vide
-                $csvData[0][$columnTitle] = '';
+                $csvData[0][$colTitle] = '';
             }
         }
 
         // Ajouter les données dans les bonnes colonnes (par lettre de colonne)
         foreach ($filteredData as $rowIndex => $row) {
-            foreach ($selectedColumns as $columnTitle => $columnLetter) {
+            foreach ($selectedColumns as $colTitle => $colLetters) {
                 // Assure-toi de l'indexation correcte
-                $columnIndex = array_search($columnLetter, array_column($filteredData[0], 0)); // Trouver l'indice de la colonne
+                $columnIndex = array_search($colLetters, array_column($filteredData[0], 0)); // Trouver l'indice de la colonne
                 if (isset($row[$columnIndex])) {
-                    $csvData[$rowIndex + 1][$columnTitle] = $row[$columnIndex];
+                    $csvData[$rowIndex + 1][$colTitle] = $row[$columnIndex];
                 } else {
-                    $csvData[$rowIndex + 1][$columnTitle] = ''; // Ajouter une cellule vide si aucune donnée n'est présente
+                    $csvData[$rowIndex + 1][$colTitle] = ''; // Ajouter une cellule vide si aucune donnée n'est présente
                 }
             }
         }

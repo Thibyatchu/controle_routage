@@ -1,0 +1,42 @@
+{# filters_dropdowns.html.twig #}
+
+<div class="mt-5">
+    <h3>Filtres</h3>
+    <form action="{{ path('app_treatment') }}" method="post">
+        <div class="row g-3">
+            {% set filterFields = [
+                { 'label': 'Raison Sociale', 'name': 'raison_social' },
+                { 'label': 'Civilité, Nom, Prénom', 'name': 'civilite_nom_prenom[]', 'multiple': true },
+                { 'label': 'Adresse 1', 'name': 'adresse_1' },
+                { 'label': 'Adresse 2', 'name': 'adresse_2' },
+                { 'label': 'Adresse 3', 'name': 'adresse_3' },
+                { 'label': 'Code Postal', 'name': 'code_postal' },
+                { 'label': 'Ville', 'name': 'ville' },
+                { 'label': 'Pays', 'name': 'pays' }
+            ] %}
+
+            {% for field in filterFields %}
+                <div class="col-md-4">
+                    <p for="{{ field.name }}" class="form-label">{{ field.label }}</p>
+                    <select 
+                        class="form-select form-select-sm form-select-solid" 
+                        data-control="select2" 
+                        data-placeholder="Select an option" 
+                        data-allow-clear="true" 
+                        name="{{ field.name }}" 
+                        {% if field.multiple is defined and field.multiple %}multiple="multiple"{% endif %}
+                    >
+                        <option value=""></option>
+                        {% for letter in colLetters %}
+                            <option value="{{ letter }}">{{ letter }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div class="mt-3">
+            <button type="submit" class="btn btn-light-primary">Appliquer les filtres</button>
+        </div>
+    </form>
+</div>

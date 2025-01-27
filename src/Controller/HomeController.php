@@ -11,16 +11,8 @@ use App\Service\FileService;
 
 class HomeController extends AbstractController
 {
-    private $fileService;
-
-    // Injection du service FileService
-    public function __construct(FileService $fileService)
-    {
-        $this->fileService = $fileService;
-    }
-
     #[Route('/home', name: 'app_home')]
-    public function index(Request $request): Response
+    public function index(Request $request, FileService $fileService): Response
     {
         // Vérification si un fichier a été envoyé
         if ($request->isMethod('POST') && $request->files->has('file')) {
@@ -29,18 +21,18 @@ class HomeController extends AbstractController
             $filePath = $file->getPathname();
 
             // Vérifier si l'extension est CSV ou Excel (XLS, XLSX)
-            if (!$this->fileService->validateFileExtension($file)) {
+            if (!$fileService->validateFileExtension($file)) {
                 // Si l'extension n'est pas valide, ajouter un message d'erreur à la session
                 $this->addFlash('error', 'Veuillez choisir un fichier CSV ou Excel (XLS, XLSX).');
                 return $this->redirectToRoute('app_home');
             }
 
             // Charger les données du fichier
-            $data = $this->fileService->loadSpreadsheetData($filePath);
+            $data = $fileService->loadSpreadsheetData($filePath);
 
             // Enregistrer les données dans la session pour les utiliser dans la page d'affichage
             $session = $request->getSession();
-            $this->fileService->storeDataInSession($data, $session);
+            $fileService->storeDataInSession($data, $session);
 
             // Rediriger vers la page d'affichage
             return $this->redirectToRoute('app_display');

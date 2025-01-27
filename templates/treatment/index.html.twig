@@ -7,8 +7,11 @@
 {% endblock %}
 
 {% block body %}
-
     <h2>Les données filtrées</h2>
+
+    {% for message in app.flashes('error') %}
+        <div class="error-message mt-4 alert alert-danger">{{ message }}</div>
+    {% endfor %}
 
     {% if filtered_data is not empty and selected_columns is not empty %}
         <table class="table table-striped">
@@ -41,5 +44,4 @@
     <form action="{{ path('app_display') }}" method="get" class="mt-4">
         <button class="btn btn-light-warning" type="submit">Retour à l'Affichage</button>
     </form>
-
 {% endblock %}
