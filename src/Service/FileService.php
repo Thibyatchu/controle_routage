@@ -6,45 +6,61 @@ namespace App\Service;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\HttpFoundation\Request;
 
 class FileService
 {
-    /**
-    * Valide l'extension du fichier uploadé (CSV, XLS, ou XLSX uniquement).
-    */
-    public function validateFileExtension(UploadedFile $file): bool
+    // Valider l'extension du fichier (CSV ou Excel)
+    public function validateFileExtension($file): bool
     {
-        $fileExtension = strtolower($file->getClientOriginalExtension());
         $validExtensions = ['csv', 'xls', 'xlsx'];
-        
-        return in_array($fileExtension, $validExtensions);
+        $extension = $file->getClientOriginalExtension();
+
+        return in_array(strtolower($extension), $validExtensions);
     }
 
-    /**
-    * Charge les données d'un fichier Excel ou CSV dans un tableau PHP.
-    */
-    public function loadSpreadsheetData($filePath): array
+    // Charger les données du fichier (CSV ou Excel)
+    public function loadSpreadsheetData(string $filePath): array
     {
-        $spreadsheet = IOFactory::load($filePath);
         $data = [];
+        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
 
-        foreach ($spreadsheet->getActiveSheet()->getRowIterator() as $row) {
-            $rowData = [];
-            foreach ($row->getCellIterator() as $cell) {
-                $rowData[] = $cell->getValue() ?? '';  // Remplacer les null par des chaînes vides
+        if ($extension === 'csv') {
+            // Traitement des fichiers CSV
+            if (($handle = fopen($filePath, 'r')) !== false) {
+                while (($row = fgetcsv($handle, 1000, ',')) !== false) {
+                    $data[] = $row;
+                }
+                fclose($handle);
             }
-            $data[] = $rowData;
+        } elseif (in_array($extension, ['xls', 'xlsx'])) {
+            // Traitement des fichiers Excel
+            try {
+                $spreadsheet = IOFactory::load($filePath);
+                $sheet = $spreadsheet->getActiveSheet();
+                $highestRow = $sheet->getHighestRow();
+                $highestColumn = $sheet->getHighestColumn();
+
+                for ($row = 1; $row <= $highestRow; $row++) {
+                    $rowData = [];
+                    for ($col = 'A'; $col <= $highestColumn; $col++) {
+                        $cell = $sheet->getCell($col . $row);
+                        $rowData[] = $cell->getValue();
+                    }
+                    $data[] = $rowData;
+                }
+            } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+                throw new \Exception("Erreur lors de la lecture du fichier Excel: " . $e->getMessage());
+            }
         }
 
         return $data;
     }
 
-    /**
-    * Stocke les données d'un fichier dans une session.
-    */
+    // Stocker les données dans la session
     public function storeDataInSession(array $data, SessionInterface $session)
     {
-        $session->set('spreadsheet_data', $data);
+        $session->set('data', $data);
     }
 
     /**
@@ -54,24 +70,26 @@ class FileService
     {
         return $session->get('spreadsheet_data', []);
     }
+    
 
     /**
     * Traite les données en ignorant un nombre de lignes définies au début.
     */
     public function processDataWithIgnoreOption(array $data, string $ignoreFirstRows): array
     {
-        // Si l'utilisateur souhaite ignorer des lignes
+        $totalRows = count($data);
+        $ignoreCount = 0;
+    
         if ($ignoreFirstRows === 'one') {
-            // Ignorer la première ligne
-            return array_slice($data, 1, 10); // Ignore la première ligne, et affiche les 10 suivantes
+            $ignoreCount = 1;
         } elseif ($ignoreFirstRows === 'two') {
-            // Ignorer les deux premières lignes
-            return array_slice($data, 2, 10); // Ignore les deux premières lignes et affiche les 10 suivantes
-        } else {
-            // Sinon, afficher les 10 premières lignes
-            return array_slice($data, 0, 10);
+            $ignoreCount = 2;
         }
+    
+        // S'assurer qu'on affiche toujours 10 lignes en partant de l'index correct
+        return array_slice($data, $ignoreCount, min(10, $totalRows - $ignoreCount));
     }
+    
 
     /**
     * Génère une liste des lettres de colonnes (A-Z, AA-ZZ, etc.).
@@ -223,5 +241,26 @@ class FileService
             }
         }
         return $csvData;
+    }
+
+    public function getColumnData(array $data, array $selectedColumns): array
+    {
+        $result = [];
+        foreach ($selectedColumns as $column) {
+            if (empty($column)) {
+                $result[] = []; // Si aucune colonne sélectionnée, ajouter une colonne vide
+            } else {
+                // Convertir la lettre de la colonne en un index
+                $colIndex = ord(strtoupper($column)) - 65;
+                $columnData = [];
+
+                foreach ($data as $row) {
+                    $columnData[] = $row[$colIndex] ?? ''; // Si la colonne n'existe pas, laisser vide
+                }
+
+                $result[] = $columnData; // Ajouter la colonne aux résultats
+            }
+        }
+        return $result;
     }
 }
