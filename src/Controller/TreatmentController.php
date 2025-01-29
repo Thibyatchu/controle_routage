@@ -1,26 +1,25 @@
 <?php
 
+// src/Controller/TreatmentController.php
 namespace App\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
-use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Routing\Annotation\Route;
 use App\Service\FileService;
 
 class TreatmentController extends AbstractController
 {
     #[Route('/treatment', name: 'app_treatment')]
-    public function index(Request $request, FileService $fileService): Response
+    public function index(Request $request, SessionInterface $session, FileService $fileService): Response
     {
-        $session = $request->getSession();
+        // Récupérer les données filtrées de la session
+        $filteredData = $fileService->getDataFromSession($session);
 
-        // Récupérer les données depuis la session avec getDataFromSession
-        $data = $fileService->getDataFromSession($session);
-
-        // Si aucune donnée n'est trouvée, afficher un message d'erreur et rediriger vers la page d'accueil
-        if (empty($data)) {
+        // Si aucune donnée n'est trouvée, afficher un message d'erreur et rediriger vers la page d'affichage
+        if (empty($filteredData)) {
             $this->addFlash('error', 'Aucune donnée filtrée trouvée dans la session.');
             return $this->redirectToRoute('app_display');
         }
@@ -87,7 +86,7 @@ class TreatmentController extends AbstractController
         // Filtrer les données pour ne conserver que les colonnes sélectionnées
         $dataToDisplay = array_map(function ($row) use ($selectedColumnsIndexes) {
             return array_intersect_key($row, array_flip($selectedColumnsIndexes));
-        }, $data);
+        }, $filteredData);
 
         // Limiter l'affichage à 10 lignes
         $dataToDisplay = array_slice($dataToDisplay, 0, 10);

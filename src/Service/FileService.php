@@ -10,57 +10,42 @@ use Symfony\Component\HttpFoundation\Request;
 
 class FileService
 {
-    // Valider l'extension du fichier (CSV ou Excel)
-    public function validateFileExtension($file): bool
+    /**
+    * Valide l'extension du fichier uploadé (CSV, XLS, ou XLSX uniquement).
+    */
+    public function validateFileExtension(UploadedFile $file): bool
     {
+        $fileExtension = strtolower($file->getClientOriginalExtension());
         $validExtensions = ['csv', 'xls', 'xlsx'];
-        $extension = $file->getClientOriginalExtension();
-
-        return in_array(strtolower($extension), $validExtensions);
+        
+        return in_array($fileExtension, $validExtensions);
     }
 
-    // Charger les données du fichier (CSV ou Excel)
-    public function loadSpreadsheetData(string $filePath): array
+    /**
+    * Charge les données d'un fichier Excel ou CSV dans un tableau PHP.
+    */
+    public function loadSpreadsheetData($filePath): array
     {
+        $spreadsheet = IOFactory::load($filePath);
         $data = [];
-        $extension = pathinfo($filePath, PATHINFO_EXTENSION);
 
-        if ($extension === 'csv') {
-            // Traitement des fichiers CSV
-            if (($handle = fopen($filePath, 'r')) !== false) {
-                while (($row = fgetcsv($handle, 1000, ',')) !== false) {
-                    $data[] = $row;
-                }
-                fclose($handle);
+        foreach ($spreadsheet->getActiveSheet()->getRowIterator() as $row) {
+            $rowData = [];
+            foreach ($row->getCellIterator() as $cell) {
+                $rowData[] = $cell->getValue() ?? '';  // Remplacer les null par des chaînes vides
             }
-        } elseif (in_array($extension, ['xls', 'xlsx'])) {
-            // Traitement des fichiers Excel
-            try {
-                $spreadsheet = IOFactory::load($filePath);
-                $sheet = $spreadsheet->getActiveSheet();
-                $highestRow = $sheet->getHighestRow();
-                $highestColumn = $sheet->getHighestColumn();
-
-                for ($row = 1; $row <= $highestRow; $row++) {
-                    $rowData = [];
-                    for ($col = 'A'; $col <= $highestColumn; $col++) {
-                        $cell = $sheet->getCell($col . $row);
-                        $rowData[] = $cell->getValue();
-                    }
-                    $data[] = $rowData;
-                }
-            } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
-                throw new \Exception("Erreur lors de la lecture du fichier Excel: " . $e->getMessage());
-            }
+            $data[] = $rowData;
         }
 
         return $data;
     }
 
-    // Stocker les données dans la session
+    /**
+    * Stocke les données d'un fichier dans une session.
+    */
     public function storeDataInSession(array $data, SessionInterface $session)
     {
-        $session->set('data', $data);
+        $session->set('spreadsheet_data', $data);
     }
 
     /**

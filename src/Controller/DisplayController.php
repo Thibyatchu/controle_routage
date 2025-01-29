@@ -14,13 +14,14 @@ class DisplayController extends AbstractController
     #[Route('/display', name: 'app_display')]
     public function index(Request $request, FileService $fileService): Response
     {
-        // Récupérer la session
+        
+        // Enregistrer l'option dans la session pour une utilisation future
         $session = $request->getSession();
 
-        // Récupérer les données depuis la session avec getDataFromSession
-        $data = $fileService->getDataFromSession($session); // Utilisation de la méthode de FileService
+        // Récupérer les données de la session
+        $data = $fileService->getDataFromSession($session);
 
-        // Si aucune donnée n'est trouvée dans la session
+        // Si aucune donnée n'est trouvée
         if (empty($data)) {
             return $this->render('display/index.html.twig', [
                 'data' => [],  // Pas de données à afficher
@@ -30,10 +31,10 @@ class DisplayController extends AbstractController
             ]);
         }
 
-        // Récupérer l'option d'ignorance des lignes depuis la requête, par défaut "none"
+        // Récupérer la valeur de l'option d'ignorance des lignes
         $ignoreFirstRows = $request->get('ignore_first_rows', 'none');
 
-        // Traiter les données en fonction de l'option d'ignorance des lignes
+        // Traiter les données selon l'option d'ignorance des lignes
         $data = $fileService->processDataWithIgnoreOption($data, $ignoreFirstRows);
 
         // Trouver le nombre de colonnes maximum
@@ -44,24 +45,20 @@ class DisplayController extends AbstractController
             $row = array_pad($row, $maxColumns, '');
         }
 
-        // Générer dynamiquement les lettres des colonnes (A, B, C, ..., Z, AA, AB, ...)
+        // Générer les lettres des colonnes dynamiquement (A, B, C, ..., Z, AA, AB, ...)
         $colLetters = $fileService->getColumnLetters($maxColumns);
 
-        // Récupérer les colonnes sélectionnées par l'utilisateur depuis la requête
+        // Récupérer les colonnes sélectionnées par l'utilisateur
         $selectedColumns = $request->get('selected_columns', []);
 
-        // Si des colonnes sont sélectionnées, filtrer les données en fonction de ces colonnes
-        if (!empty($selectedColumns)) {
-            $data = $fileService->filterDataBySelectedColumns($data, $selectedColumns);
-        }
+        // Filtrer les données en fonction des colonnes sélectionnées
+        $filteredData = $fileService->filterDataBySelectedColumns($data, $selectedColumns);
 
-        // Retourner la vue avec les données traitées et filtrées
         return $this->render('display/index.html.twig', [
-            'data' => $data,  // Afficher les données traitées
+            'data' => $filteredData,  // Afficher les données filtrées
             'ignore_first_rows' => $ignoreFirstRows,
             'colLetters' => $colLetters,  // Passer les lettres des colonnes à la vue
             'selected_columns' => $selectedColumns,  // Passer les colonnes sélectionnées
         ]);
     }
 }
-

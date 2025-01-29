@@ -28,13 +28,7 @@ class HomeController extends AbstractController
             }
 
             // Charger les données du fichier
-            try {
-                $data = $fileService->loadSpreadsheetData($filePath);
-            } catch (\Exception $e) {
-                // Si une erreur survient lors du traitement du fichier, afficher l'erreur
-                $this->addFlash('error', $e->getMessage());
-                return $this->redirectToRoute('app_home');
-            }
+            $data = $fileService->loadSpreadsheetData($filePath);
 
             // Enregistrer les données dans la session pour les utiliser dans la page d'affichage
             $session = $request->getSession();
