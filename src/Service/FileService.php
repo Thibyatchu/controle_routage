@@ -267,26 +267,26 @@ class FileService
     }
 
     /**
-     * Convertit une lettre de colonne (A, B, C...) en un indice numérique (1, 2, 3,...).
+     * Convertit une lettre de colonne (A, B, C...) en un indice numérique (0, 1, 2, ...).
      * @param string $column Lettre de la colonne (A, B, C...).
-     * @return int L'indice correspondant à la colonne (1, 2, 3...).
+     * @return int L'indice correspondant à la colonne (0, 1, 2...).
      */
     public function columnToIndex(string $column): int
     {
         // Convertir la lettre en majuscule et récupérer son code ASCII
         $column = strtoupper($column);
-        $index = ord($column) - ord('A') + 1; // A devient 1, B devient 2, etc.
+        $index = ord($column) - ord('A') + 0; // A devient 0, B devient 1, etc.
         
         return $index;
     }
 
     /**
-     * Convertit un indice numérique (1, 2, 3...) en une lettre de colonne (A, B, C...).
-     * @param int $index Indice numérique de la colonne (1, 2, 3...).
+     * Convertit un indice numérique (0, 1, 2...) en une lettre de colonne (A, B, C...).
+     * @param int $index Indice numérique de la colonne (0, 1, 2...).
      * @return string Lettre de la colonne (A, B, C...).
      */
     public function transformIndexToLetter(int $index): string
     {
-        return chr(64 + $index); // 1 => A, 2 => B, 3 => C, ...
+        return chr(65 + $index); // 0 => A, 1 => B, 2 => C, ...
     }
 }
