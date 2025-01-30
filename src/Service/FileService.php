@@ -155,19 +155,6 @@ class FileService
     }
 
     /**
-    * Valide et convertit les colonnes sélectionnées en tableau.
-    */
-    //public function validateAndConvertColumns($selectedColumns): array
-    //{
-        // Convertir les colonnes en tableau si c'est une chaîne de caractères
-    //    if (is_string($selectedColumns)) {
-    //        $selectedColumns = explode(',', $selectedColumns);
-    //    }
-
-    //    return $selectedColumns;
-    //}
-
-    /**
     * Génère un fichier CSV à partir de données brutes.
     */
     public function generateCsvFromData(array $data): string
@@ -289,4 +276,41 @@ class FileService
     {
         return chr(65 + $index); // 0 => A, 1 => B, 2 => C, ...
     }
+
+    public function transformTextToUppercase(array &$data): bool
+    {
+        $changed = false;
+    
+        foreach ($data as &$row) {
+            foreach ($row as &$cell) {
+                if (is_string($cell) && strtolower($cell) !== $cell) {
+                    $cell = strtoupper($cell);
+                    $changed = true;
+                }
+            }
+        }
+    
+        return $changed;
+    }
+
+    /*
+    public function validatePostalCodes(array &$data, string $codePostalColumn): bool
+    {
+        $changed = false;
+    
+        foreach ($data as &$row) {
+            if (isset($row[$codePostalColumn]) && is_numeric($row[$codePostalColumn])) {
+                $codePostal = (string) $row[$codePostalColumn];
+    
+                // Si le code postal a moins de 5 chiffres, ajouter un zéro devant
+                if (strlen($codePostal) < 5) {
+                    $row[$codePostalColumn] = str_pad($codePostal, 5, '0', STR_PAD_LEFT);
+                    $changed = true;
+                }
+            }
+        }
+    
+        return $changed;
+    }
+    */
 }

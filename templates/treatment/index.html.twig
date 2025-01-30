@@ -6,21 +6,37 @@
 <div class="container">
     <h1 class="my-4">Affichage des données traitées</h1>
 
+    {# Affichage du message si des changements ont été effectués pour les majuscules #}
+    {% if changed %}
+        <div class="alert alert-info">
+            <strong>Note :</strong> Toutes les lettres minuscules dans le fichier ont été converties en majuscules.
+        </div>
+    {% endif %}
+
+    
+    {# Affichage du message si des changements ont été effectués pour les codes postaux
+    {% if changed %}
+        <div class="alert alert-info">
+            <strong>Note :</strong> Tous les codes postaux ayant moins de 5 chiffres ont été complétés avec des zéros devant.
+        </div>
+    {% endif %}
+    #}
+
     <!-- Tableau des données -->
     <div class="table-responsive">
         <table class="table table-striped table-bordered">
             <thead>
                 <tr>
-                    {% for index in selected_columns %}
-                        <th>{{ fileService.transformIndexToLetter(index) }}</th>
+                    {% for title in selected_column_titles %}
+                        <th>{{ title|default('') }}</th>  {# Assurez-vous d'afficher un en-tête vide si nécessaire #}
                     {% endfor %}
                 </tr>
             </thead>
             <tbody>
                 {% for row in filtered_data %}
                     <tr>
-                        {% for cell in row %}
-                            <td>{{ cell|default('') }}</td>  {# Si la cellule est vide, afficher un espace blanc #}
+                        {% for index in selected_columns %}
+                            <td>{{ row[index] | default('') }}</td>  {# Si la cellule est vide, afficher un espace blanc #}
                         {% endfor %}
                     </tr>
                 {% endfor %}

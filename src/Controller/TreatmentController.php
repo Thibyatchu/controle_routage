@@ -18,19 +18,33 @@ class TreatmentController extends AbstractController
     {
         // Récupérer l'option d'ignorance des lignes depuis la session
         $ignoreFirstRows = $session->get('ignore_first_rows', 'none');
-
+    
         // Récupérer les données filtrées de la session
         $filteredData = $fileService->getDataFromSession($session);
-
+    
         // Si aucune donnée n'est trouvée, afficher un message d'erreur et rediriger
         if (empty($filteredData)) {
             $this->addFlash('error', 'Aucune donnée filtrée trouvée dans la session.');
             return $this->redirectToRoute('app_display');
         }
+    
+        // Appliquer la transformation des lettres minuscules en majuscules
+        $changed = false;
+        $changed |= $fileService->transformTextToUppercase($filteredData);
+        
+        /*
+        // Récupérer la colonne "Code Postal" spécifiée par l'utilisateur
+        $codePostalColumn = $request->get('code_postal', '');
 
+        // Vérifier et modifier les codes postaux
+        if (!empty($codePostalColumn)) {
+            $changed |= $fileService->validatePostalCodes($filteredData, $codePostalColumn);
+        }
+        */
+        
         // Traiter les données selon l'option d'ignorance des lignes
         $filteredData = $fileService->processDataWithIgnoreOption($filteredData, $ignoreFirstRows);
-
+    
         // Récupérer les colonnes sélectionnées par l'utilisateur dans les listes déroulantes
         $raisonSocial = $request->get('raison_social', '');
         $civiliteNomPrenom = $request->get('civilite_nom_prenom', []);
@@ -40,57 +54,86 @@ class TreatmentController extends AbstractController
         $codePostal = $request->get('code_postal', '');
         $ville = $request->get('ville', '');
         $pays = $request->get('pays', '');
-
-        // Convertir les lettres des colonnes en indices
+    
+        // Map des titres des colonnes et de leurs noms dans le formulaire
+        $filterTitles = [
+            'raison_social' => 'Raison Sociale',
+            'civilite_nom_prenom' => 'Civilité, Nom, Prénom',
+            'adresse_1' => 'Adresse 1',
+            'adresse_2' => 'Adresse 2',
+            'adresse_3' => 'Adresse 3',
+            'code_postal' => 'Code Postal',
+            'ville' => 'Ville',
+            'pays' => 'Pays'
+        ];
+    
+        // Construire les indices de colonnes sélectionnées
         $selectedColumnsIndexes = [];
-
+        $selectedColumnTitles = [];
+    
+        // Pour chaque filtre sélectionné
         if (!empty($raisonSocial)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($raisonSocial);
+            $selectedColumnTitles[] = $filterTitles['raison_social'];
         }
-
+    
         if (!empty($civiliteNomPrenom)) {
-            foreach ($civiliteNomPrenom as $column) {
+            // Ajout de la première colonne avec son titre
+            $selectedColumnsIndexes[] = $fileService->columnToIndex($civiliteNomPrenom[0]);
+            $selectedColumnTitles[] = $filterTitles['civilite_nom_prenom'];
+    
+            // Ajout des autres colonnes sans titre
+            foreach (array_slice($civiliteNomPrenom, 1) as $column) {
                 $selectedColumnsIndexes[] = $fileService->columnToIndex($column);
+                $selectedColumnTitles[] = ''; // L'en-tête sera vide pour les autres colonnes
             }
         }
-
+    
         if (!empty($adresse1)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($adresse1);
+            $selectedColumnTitles[] = $filterTitles['adresse_1'];
         }
-
+    
         if (!empty($adresse2)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($adresse2);
+            $selectedColumnTitles[] = $filterTitles['adresse_2'];
         }
-
+    
         if (!empty($adresse3)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($adresse3);
+            $selectedColumnTitles[] = $filterTitles['adresse_3'];
         }
-
+    
         if (!empty($codePostal)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($codePostal);
+            $selectedColumnTitles[] = $filterTitles['code_postal'];
         }
-
+    
         if (!empty($ville)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($ville);
+            $selectedColumnTitles[] = $filterTitles['ville'];
         }
-
+    
         if (!empty($pays)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($pays);
+            $selectedColumnTitles[] = $filterTitles['pays'];
         }
-
+    
         // Filtrer les données en utilisant ces indices de colonne
         $dataToDisplay = array_map(function ($row) use ($selectedColumnsIndexes) {
             return array_intersect_key($row, array_flip($selectedColumnsIndexes));
         }, $filteredData);
-
+    
         // Limiter l'affichage à 10 lignes
         $dataToDisplay = array_slice($dataToDisplay, 0, 10);
-
-        // Passer les données à la vue avec les colonnes sélectionnées
+    
+        // Passer les données à la vue avec les colonnes sélectionnées et leurs titres
         return $this->render('treatment/index.html.twig', [
             'filtered_data' => $dataToDisplay,
             'selected_columns' => $selectedColumnsIndexes,
+            'selected_column_titles' => $selectedColumnTitles, // Passer les titres des colonnes
             'fileService' => $fileService,
+            'changed' => $changed, // Passer le statut de changement
         ]);
-    }
+    }         
 }
