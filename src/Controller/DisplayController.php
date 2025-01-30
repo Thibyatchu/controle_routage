@@ -8,14 +8,18 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Service\FileService;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class DisplayController extends AbstractController
 {
     #[Route('/display', name: 'app_display')]
-    public function index(Request $request, FileService $fileService): Response
+    public function index(Request $request, FileService $fileService, SessionInterface $session): Response
     {
-        // Enregistrer l'option dans la session pour une utilisation future
-        $session = $request->getSession();
+        // Récupérer l'option d'ignorance des lignes
+        $ignoreFirstRows = $request->get('ignore_first_rows', 'none');
+        
+        // Enregistrer cette option dans la session pour la réutiliser dans la page /treatment
+        $session->set('ignore_first_rows', $ignoreFirstRows);
 
         // Récupérer les données de la session
         $data = $fileService->getDataFromSession($session);
@@ -30,22 +34,11 @@ class DisplayController extends AbstractController
             ]);
         }
 
-        // Récupérer la valeur de l'option d'ignorance des lignes
-        $ignoreFirstRows = $request->get('ignore_first_rows', 'none');
-
         // Traiter les données selon l'option d'ignorance des lignes
         $data = $fileService->processDataWithIgnoreOption($data, $ignoreFirstRows);
 
-        // Trouver le nombre de colonnes maximum
-        $maxColumns = max(array_map('count', $data));
-
-        // Compléter les lignes manquantes de colonnes avec des chaînes vides
-        foreach ($data as &$row) {
-            $row = array_pad($row, $maxColumns, '');
-        }
-
-        // Générer les lettres des colonnes dynamiquement (A, B, C, ..., Z, AA, AB, ...)
-        $colLetters = $fileService->getColumnLetters($maxColumns);
+        // Limiter les données à 10 lignes
+        $data = array_slice($data, 0, 10);
 
         // Récupérer les colonnes sélectionnées par l'utilisateur
         $selectedColumns = $request->get('selected_columns', []);
@@ -56,11 +49,14 @@ class DisplayController extends AbstractController
         // Filtrer les données en fonction des colonnes sélectionnées
         $filteredData = $fileService->filterDataBySelectedColumns($data, $selectedColumns);
 
+        // Calculer les lettres des colonnes (A, B, C, etc.)
+        $colLetters = $fileService->getColumnLetters($filteredData);
+
         return $this->render('display/index.html.twig', [
             'data' => $filteredData,  // Afficher les données filtrées
             'ignore_first_rows' => $ignoreFirstRows,
-            'colLetters' => $colLetters,  // Passer les lettres des colonnes à la vue
-            'selected_columns' => $selectedColumns,  // Passer les colonnes sélectionnées
+            'colLetters' => $colLetters,
+            'selected_columns' => $selectedColumns,
         ]);
     }
 }

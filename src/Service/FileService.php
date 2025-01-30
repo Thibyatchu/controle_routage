@@ -60,41 +60,41 @@ class FileService
     /**
     * Traite les données en ignorant un nombre de lignes définies au début.
     */
-    public function processDataWithIgnoreOption(array $data, string $ignoreFirstRows): array
+    public function processDataWithIgnoreOption(array $data, string $ignoreOption): array
     {
-        $totalRows = count($data);
-        $ignoreCount = 0;
-    
-        if ($ignoreFirstRows === 'one') {
-            $ignoreCount = 1;
-        } elseif ($ignoreFirstRows === 'two') {
-            $ignoreCount = 2;
+        // Selon l'option, ignorer les premières lignes
+        switch ($ignoreOption) {
+            case 'one':
+                array_shift($data); // Ignorer la première ligne
+                break;
+            case 'two':
+                array_splice($data, 0, 2); // Ignorer les deux premières lignes
+                break;
+            case 'none':
+            default:
+                // Ne rien faire
+                break;
         }
     
-        // S'assurer qu'on affiche toujours 10 lignes en partant de l'index correct
-        return array_slice($data, $ignoreCount, min(10, $totalRows - $ignoreCount));
+        return $data;
     }
     
 
     /**
     * Génère une liste des lettres de colonnes (A-Z, AA-ZZ, etc.).
     */
-    public function getColumnLetters(int $maxColumns): array
+    public function getColumnLetters(array $data): array
     {
-        $colLetters = [];
-        for ($i = 0; $i < $maxColumns; $i++) {
-            if ($i < 26) {
-                // A à Z
-                $colLetters[] = chr(65 + $i); // De A à Z
-            } else {
-                // AA, AB, etc.
-                $firstLetter = chr(65 + floor($i / 26) - 1); // Lettre de la première partie (A, B, C,...)
-                $secondLetter = chr(65 + ($i % 26)); // Lettre de la deuxième partie (A, B, C,...)
-                $colLetters[] = $firstLetter . $secondLetter; // Combine les deux parties pour les lettres AA, AB, ...
-            }
+        // Supposons que chaque ligne dans les données a le même nombre de colonnes
+        // Récupérer les clés des colonnes (indices numériques) et les convertir en lettres
+        $numColumns = count($data[0]);
+        
+        $letters = [];
+        for ($i = 0; $i < $numColumns; $i++) {
+            $letters[] = chr(65 + $i); // Convertit l'indice en lettre (A, B, C, ...)
         }
-
-        return $colLetters;
+    
+        return $letters;
     }
 
     /**

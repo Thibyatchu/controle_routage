@@ -16,6 +16,9 @@ class TreatmentController extends AbstractController
     #[Route('/treatment', name: 'app_treatment')]
     public function index(Request $request, SessionInterface $session, FileService $fileService): Response
     {
+        // Récupérer l'option d'ignorance des lignes depuis la session
+        $ignoreFirstRows = $session->get('ignore_first_rows', 'none');
+
         // Récupérer les données filtrées de la session
         $filteredData = $fileService->getDataFromSession($session);
 
@@ -24,6 +27,9 @@ class TreatmentController extends AbstractController
             $this->addFlash('error', 'Aucune donnée filtrée trouvée dans la session.');
             return $this->redirectToRoute('app_display');
         }
+
+        // Traiter les données selon l'option d'ignorance des lignes
+        $filteredData = $fileService->processDataWithIgnoreOption($filteredData, $ignoreFirstRows);
 
         // Récupérer les colonnes sélectionnées par l'utilisateur dans les listes déroulantes
         $raisonSocial = $request->get('raison_social', '');
@@ -84,7 +90,7 @@ class TreatmentController extends AbstractController
         return $this->render('treatment/index.html.twig', [
             'filtered_data' => $dataToDisplay,
             'selected_columns' => $selectedColumnsIndexes,
-            'fileService' => $fileService, // Passer l'instance du service pour la transformation dans la vue
+            'fileService' => $fileService,
         ]);
     }
 }
