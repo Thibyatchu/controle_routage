@@ -248,4 +248,45 @@ class FileService
         }
         return $result;
     }
+
+    public function splitColumnData(array $filteredData, array $columnsToSplit): array
+    {
+        foreach ($filteredData as &$row) {
+            foreach ($columnsToSplit as $columnName => $splitIndexes) {
+                // Si la colonne existe dans la ligne, on la sépare
+                if (isset($row[$columnName])) {
+                    $splitData = explode(' ', $row[$columnName]); // On suppose ici que les parties sont séparées par un espace
+                    foreach ($splitIndexes as $index => $splitColumn) {
+                        $row[$splitColumn] = isset($splitData[$index]) ? $splitData[$index] : ''; // Ajouter les parties séparées aux bonnes colonnes
+                    }
+                    unset($row[$columnName]); // Enlever la colonne d'origine (si elle est séparée)
+                }
+            }
+        }
+        return $filteredData;
+    }
+
+    /**
+     * Convertit une lettre de colonne (A, B, C...) en un indice numérique (1, 2, 3,...).
+     * @param string $column Lettre de la colonne (A, B, C...).
+     * @return int L'indice correspondant à la colonne (1, 2, 3...).
+     */
+    public function columnToIndex(string $column): int
+    {
+        // Convertir la lettre en majuscule et récupérer son code ASCII
+        $column = strtoupper($column);
+        $index = ord($column) - ord('A') + 1; // A devient 1, B devient 2, etc.
+        
+        return $index;
+    }
+
+    /**
+     * Convertit un indice numérique (1, 2, 3...) en une lettre de colonne (A, B, C...).
+     * @param int $index Indice numérique de la colonne (1, 2, 3...).
+     * @return string Lettre de la colonne (A, B, C...).
+     */
+    public function transformIndexToLetter(int $index): string
+    {
+        return chr(64 + $index); // 1 => A, 2 => B, 3 => C, ...
+    }
 }

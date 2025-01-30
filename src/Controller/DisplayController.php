@@ -14,7 +14,6 @@ class DisplayController extends AbstractController
     #[Route('/display', name: 'app_display')]
     public function index(Request $request, FileService $fileService): Response
     {
-        
         // Enregistrer l'option dans la session pour une utilisation future
         $session = $request->getSession();
 
@@ -50,6 +49,9 @@ class DisplayController extends AbstractController
 
         // Récupérer les colonnes sélectionnées par l'utilisateur
         $selectedColumns = $request->get('selected_columns', []);
+
+        // Enregistrer les colonnes sélectionnées dans la session
+        $session->set('selected_columns', $selectedColumns);
 
         // Filtrer les données en fonction des colonnes sélectionnées
         $filteredData = $fileService->filterDataBySelectedColumns($data, $selectedColumns);
