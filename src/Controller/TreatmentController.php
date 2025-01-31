@@ -38,19 +38,20 @@ class TreatmentController extends AbstractController
 
         // Appliquer la suppression des accents et des apostrophes
         $changedAccentsApostrophes = $fileService->removeAccentsAndApostrophes($filteredData);
-
-        /*
-        // Récupérer la colonne "Code Postal" spécifiée par l'utilisateur
-        $codePostalColumn = $request->get('code_postal', '');
-
-        // Vérifier et modifier les codes postaux
-        if (!empty($codePostalColumn)) {
-            $changed |= $fileService->validatePostalCodes($filteredData, $codePostalColumn);
-        }
-        */
         
-        // Traiter les données selon l'option d'ignorance des lignes
-        $filteredData = $fileService->processDataWithIgnoreOption($filteredData, $ignoreFirstRows);
+        // **APPLIQUER L'IGNORANCE DES LIGNES**
+        $filteredData = $fileService->ignoreFirstRows($filteredData, $ignoreFirstRows, $session);
+
+        // Récupérer les colonnes sélectionnées
+        $codePostal = $request->get('code_postal', '');
+        $pays = $request->get('pays', '');
+
+        // Vérifier et modifier les codes postaux si un pays et un code postal sont sélectionnés
+        if (!empty($codePostal) && !empty($pays)) {
+            $postalCodeIndex = $fileService->columnToIndex($codePostal);
+            $countryIndex = $fileService->columnToIndex($pays);
+            $changedPostalCodes = $fileService->validatePostalCodes($filteredData, $postalCodeIndex, $countryIndex);
+        }
     
         // Récupérer les colonnes sélectionnées par l'utilisateur dans les listes déroulantes
         $raisonSocial = $request->get('raison_social', '');
@@ -133,7 +134,7 @@ class TreatmentController extends AbstractController
     
         // Limiter l'affichage à 10 lignes
         $dataToDisplay = array_slice($dataToDisplay, 0, 10);
-    
+
         // Passer les données à la vue avec les colonnes sélectionnées et leurs titres
         return $this->render('treatment/index.html.twig', [
             'filtered_data' => $dataToDisplay,
@@ -142,6 +143,7 @@ class TreatmentController extends AbstractController
             'fileService' => $fileService,
             'changedUppercase' => $changedUppercase, // Passer le statut de changement
             'changedAccentsApostrophes' => $changedAccentsApostrophes, // Passer le statut de changement
+            'changedPostalCodes' => $changedPostalCodes, // Passer le statut de changement
         ]);
     }         
 }

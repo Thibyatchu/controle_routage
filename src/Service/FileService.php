@@ -61,25 +61,17 @@ class FileService
     /**
     * Traite les données en ignorant un nombre de lignes définies au début.
     */
-    public function processDataWithIgnoreOption(array $data, string $ignoreOption): array
+    public function ignoreFirstRows(array $data, string $ignoreOption): array
     {
-        // Selon l'option, ignorer les premières lignes
-        switch ($ignoreOption) {
-            case 'one':
-                array_shift($data); // Ignorer la première ligne
-                break;
-            case 'two':
-                array_splice($data, 0, 2); // Ignorer les deux premières lignes
-                break;
-            case 'none':
-            default:
-                // Ne rien faire
-                break;
+        if ($ignoreOption === 'one' && count($data) > 0) {
+            array_shift($data); // Supprime la première ligne
+        } elseif ($ignoreOption === 'two' && count($data) > 1) {
+            array_shift($data); // Supprime la première ligne
+            array_shift($data); // Supprime la deuxième ligne
         }
-    
+
         return $data;
     }
-    
 
     /**
     * Génère une liste des lettres de colonnes (A-Z, AA-ZZ, etc.).
@@ -326,5 +318,30 @@ class FileService
         }
 
         return $changed;
-    }  
+    }
+
+    public function validatePostalCodes(array &$data, int $postalCodeIndex, int $countryIndex): bool
+    {
+        $changed = false;
+
+        foreach ($data as &$row) {
+            if (!isset($row[$postalCodeIndex]) || !isset($row[$countryIndex])) {
+                continue; // Évite les erreurs si les indices n'existent pas
+            }
+
+            $codePostal = trim($row[$postalCodeIndex]);
+            $pays = strtoupper(trim($row[$countryIndex])); // Convertir en majuscules pour éviter les erreurs
+
+            // Vérifie si le pays est la France
+            if (in_array($pays, ['FR', 'FRA', 'FRANCE'])) {
+                // Vérifie si le code postal contient moins de 5 chiffres
+                if (ctype_digit($codePostal) && strlen($codePostal) < 5) {
+                    $row[$postalCodeIndex] = str_pad($codePostal, 5, '0', STR_PAD_LEFT); // Ajoute des zéros à gauche
+                    $changed = true;
+                }
+            }
+        }
+
+        return $changed;
+    }
 }

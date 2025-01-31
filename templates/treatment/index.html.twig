@@ -19,7 +19,14 @@
             <strong>Note :</strong> Tous les accents ont été enlevés et les apostrophes ont été supprimées.
         </div>
     {% endif %}
-    
+
+    {# Affichage du message si des codes postaux ont été modifiés #}
+    {% if changedPostalCodes %}
+    <div class="alert alert-info">
+        <strong>Note :</strong> Les codes postaux ont été vérifiés et corrigés si nécessaire (ajout de zéros devant pour les codes français en cas d'oublie).
+    </div>
+    {% endif %}
+
     <!-- Tableau des données -->
     <div class="table-responsive">
         <table class="table table-striped table-bordered">

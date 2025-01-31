@@ -35,7 +35,7 @@ class DisplayController extends AbstractController
         }
 
         // Traiter les données selon l'option d'ignorance des lignes
-        $data = $fileService->processDataWithIgnoreOption($data, $ignoreFirstRows);
+        $data = $fileService->ignoreFirstRows($data, $ignoreFirstRows);
 
         // Limiter les données à 10 lignes
         $data = array_slice($data, 0, 10);
