@@ -65,6 +65,51 @@
         </form>
 
         <!-- Listes déroulantes pour sélectionner des colonnes -->
-        {% include 'display/filters_dropdowns.html.twig' %}
+        <div class="mt-5">
+            <h3>Filtres</h3>
+            <form action="{{ path('app_treatment') }}" method="post">
+                <div class="row g-3">
+                    {% set filterFields = [
+                        { 'label': 'Raison Sociale', 'name': 'raison_social', 'required': true },
+                        { 'label': 'Civilité, Nom, Prénom', 'name': 'civilite_nom_prenom[]', 'multiple': true, 'required': true },
+                        { 'label': 'Adresse 1', 'name': 'adresse_1', 'required': true },
+                        { 'label': 'Adresse 2', 'name': 'adresse_2', 'required': true },
+                        { 'label': 'Adresse 3', 'name': 'adresse_3', 'required': false },
+                        { 'label': 'Code Postal', 'name': 'code_postal', 'required': true },
+                        { 'label': 'Ville', 'name': 'ville', 'required': true },
+                        { 'label': 'Pays', 'name': 'pays', 'required': true }
+                    ] %}
+
+                    {% for field in filterFields %}
+                        <div class="col-md-4">
+                            <p for="{{ field.name }}" class="form-label">
+                                {{ field.label }}
+                                {% if field.required %}
+                                    <span class="text-danger">*</span>  {# Affiche une étoile rouge pour les champs obligatoires #}
+                                {% endif %}
+                            </p>
+                            <select 
+                                class="form-select form-select-sm form-select-solid" 
+                                data-control="select2" 
+                                data-placeholder="Select an option" 
+                                data-allow-clear="true" 
+                                name="{{ field.name }}" 
+                                {% if field.required %}required="required"{% endif %}  {# Rend le champ obligatoire #}
+                                {% if field.multiple is defined and field.multiple %}multiple="multiple"{% endif %}
+                            >
+                                <option value=""></option>
+                                {% for letter in colLetters %}
+                                    <option value="{{ letter }}">{{ letter }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-light-primary">Appliquer les filtres</button>
+                </div>
+            </form>
+        </div>
     </div>
 {% endblock %}

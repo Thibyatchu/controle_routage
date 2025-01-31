@@ -28,10 +28,17 @@ class TreatmentController extends AbstractController
             return $this->redirectToRoute('app_display');
         }
     
+        // Variables pour savoir si un changement a été effectué
+        $changedUppercase = false;
+        $changedAccentsApostrophes = false;
+        $changedPostalCodes = false;
+
         // Appliquer la transformation des lettres minuscules en majuscules
-        $changed = false;
-        $changed |= $fileService->transformTextToUppercase($filteredData);
-        
+        $changedUppercase = $fileService->transformTextToUppercase($filteredData);
+
+        // Appliquer la suppression des accents et des apostrophes
+        $changedAccentsApostrophes = $fileService->removeAccentsAndApostrophes($filteredData);
+
         /*
         // Récupérer la colonne "Code Postal" spécifiée par l'utilisateur
         $codePostalColumn = $request->get('code_postal', '');
@@ -133,7 +140,8 @@ class TreatmentController extends AbstractController
             'selected_columns' => $selectedColumnsIndexes,
             'selected_column_titles' => $selectedColumnTitles, // Passer les titres des colonnes
             'fileService' => $fileService,
-            'changed' => $changed, // Passer le statut de changement
+            'changedUppercase' => $changedUppercase, // Passer le statut de changement
+            'changedAccentsApostrophes' => $changedAccentsApostrophes, // Passer le statut de changement
         ]);
     }         
 }

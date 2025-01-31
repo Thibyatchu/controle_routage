@@ -7,6 +7,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Normalizer;
 
 class FileService
 {
@@ -277,40 +278,53 @@ class FileService
         return chr(65 + $index); // 0 => A, 1 => B, 2 => C, ...
     }
 
-    public function transformTextToUppercase(array &$data): bool
+    // Passe les lettres minucscules en majuscules
+    public function transformTextToUppercase(&$data)
     {
         $changed = false;
-    
+        
         foreach ($data as &$row) {
             foreach ($row as &$cell) {
-                if (is_string($cell) && strtolower($cell) !== $cell) {
+                if (is_string($cell)) {
+                    $original = $cell;
+                    
+                    // Conversion en majuscule
                     $cell = strtoupper($cell);
-                    $changed = true;
+                    
+                    // Vérifier si la modification a eu lieu
+                    if ($cell !== $original) {
+                        $changed = true;
+                    }
                 }
             }
         }
     
         return $changed;
-    }
+    }    
 
-    /*
-    public function validatePostalCodes(array &$data, string $codePostalColumn): bool
+    // Supprime les accents et les apostrophes
+    public function removeAccentsAndApostrophes(&$data)
     {
         $changed = false;
-    
+        
         foreach ($data as &$row) {
-            if (isset($row[$codePostalColumn]) && is_numeric($row[$codePostalColumn])) {
-                $codePostal = (string) $row[$codePostalColumn];
-    
-                // Si le code postal a moins de 5 chiffres, ajouter un zéro devant
-                if (strlen($codePostal) < 5) {
-                    $row[$codePostalColumn] = str_pad($codePostal, 5, '0', STR_PAD_LEFT);
-                    $changed = true;
+            foreach ($row as &$cell) {
+                if (is_string($cell)) {
+                    $original = $cell;
+                    
+                    // Supprimer les accents
+                    $cell = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $cell);
+                    
+                    // Supprimer les apostrophes
+                    $cell = str_replace("'", ' ', $cell);
+                    
+                    if ($cell !== $original) {
+                        $changed = true;
+                    }
                 }
             }
         }
-    
+
         return $changed;
-    }
-    */
+    }  
 }
