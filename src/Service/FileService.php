@@ -270,7 +270,9 @@ class FileService
         return chr(65 + $index); // 0 => A, 1 => B, 2 => C, ...
     }
 
-    // Passe les lettres minucscules en majuscules
+    /**
+    * Passe les lettres minucscules en majuscules
+    */
     public function transformTextToUppercase(&$data)
     {
         $changed = false;
@@ -294,7 +296,9 @@ class FileService
         return $changed;
     }    
 
-    // Supprime les accents et les apostrophes
+    /**
+    * Supprime les accents et les apostrophes
+    */
     public function removeAccentsAndApostrophes(&$data)
     {
         $changed = false;
@@ -320,6 +324,9 @@ class FileService
         return $changed;
     }
 
+    /**
+    * Compare les pays (pour vérifier uniquement is le pays est français) avant de vérifier si les codes postaux sont valides (5 chiffres)
+    */
     public function validatePostalCodes(array &$data, int $postalCodeIndex, int $countryIndex): bool
     {
         $changed = false;
@@ -343,5 +350,42 @@ class FileService
         }
 
         return $changed;
+    }
+
+    /**
+    * Vérifie la longueur des cellules et retourne le nombre de lignes avec des cellules < 38 caractères.
+    */
+    public function checkCellLength(array &$data): int
+    {
+        $errorCount = 0;
+
+        foreach ($data as $row) {
+            foreach ($row as $cell) {
+                if (is_string($cell) && strlen($cell) > 38) {
+                    $errorCount++;
+                    break; // Passer à la ligne suivante dès qu'une cellule < 38 caractères est trouvée
+                }
+            }
+        }
+
+        return $errorCount;
+    }
+
+    /**
+    * Retourne les indices des cellules avec des erreurs (cellules < 38 caractères).
+    */
+    public function getErrorCells(array &$data): array
+    {
+        $errorCells = [];
+
+        foreach ($data as $rowIndex => $row) {
+            foreach ($row as $cellIndex => $cell) {
+                if (is_string($cell) && strlen($cell) > 38) {
+                    $errorCells[] = [$rowIndex, $cellIndex];
+                }
+            }
+        }
+
+        return $errorCells;
     }
 }

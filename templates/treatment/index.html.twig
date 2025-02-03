@@ -22,9 +22,16 @@
 
     {# Affichage du message si des codes postaux ont été modifiés #}
     {% if changedPostalCodes %}
-    <div class="alert alert-info">
-        <strong>Note :</strong> Les codes postaux ont été vérifiés et corrigés si nécessaire (ajout de zéros devant pour les codes français en cas d'oublie).
-    </div>
+        <div class="alert alert-info">
+            <strong>Note :</strong> Les codes postaux ont été vérifiés et corrigés si nécessaire (ajout de zéros devant pour les codes français en cas d'oublie).
+        </div>
+    {% endif %}
+
+    {# Affichage du message si des cellules ont moins de 38 caractères #}
+    {% if cellLengthErrorCount > 0 %}
+        <div class="alert alert-danger">
+            <strong>Erreur :</strong> Il y a {{ cellLengthErrorCount }} ligne(s) contenant une ou plusieurs cellules avec plus de 38 caractères.
+        </div>
     {% endif %}
 
     <!-- Tableau des données -->
@@ -38,10 +45,12 @@
                 </tr>
             </thead>
             <tbody>
-                {% for row in filtered_data %}
+                {% for rowIndex, row in filtered_data %}
                     <tr>
-                        {% for index in selected_columns %}
-                            <td>{{ row[index] | default('') }}</td>  {# Si la cellule est vide, afficher un espace blanc #}
+                        {% for cellIndex in selected_columns %}
+                            <td {% if [rowIndex, cellIndex] in errorCells %}style="background-color: red;"{% endif %}>
+                                {{ row[cellIndex] | default('') }}
+                            </td>
                         {% endfor %}
                     </tr>
                 {% endfor %}
