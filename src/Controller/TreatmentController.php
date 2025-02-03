@@ -10,6 +10,8 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Service\FileService;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class TreatmentController extends AbstractController
 {
@@ -139,17 +141,38 @@ class TreatmentController extends AbstractController
         $cellLengthErrorCount = $fileService->checkCellLength($filteredData);
         $errorCells = $fileService->getErrorCells($filteredData);
 
+        // Générer le fichier Excel avec les cellules en erreur colorées en rouge
+        $errorExcelFile = $fileService->generateErrorExcel($filteredData, $errorCells);
+
         // Passer les données à la vue avec les colonnes sélectionnées et leurs titres
         return $this->render('treatment/index.html.twig', [
             'filtered_data' => $dataToDisplay,
             'selected_columns' => $selectedColumnsIndexes,
-            'selected_column_titles' => $selectedColumnTitles, // Passer les titres des colonnes
+            'selected_column_titles' => $selectedColumnTitles,
             'fileService' => $fileService,
-            'changedUppercase' => $changedUppercase, // Passer le statut de changement
-            'changedAccentsApostrophes' => $changedAccentsApostrophes, // Passer le statut de changement
-            'changedPostalCodes' => $changedPostalCodes, // Passer le statut de changement
-            'cellLengthErrorCount' => $cellLengthErrorCount, // Passer le nombre de lignes avec des cellules < 38 caractères
-            'errorCells' => $errorCells, // Passer les indices des cellules avec des erreurs
+            'changedUppercase' => $changedUppercase,
+            'changedAccentsApostrophes' => $changedAccentsApostrophes,
+            'changedPostalCodes' => $changedPostalCodes,
+            'cellLengthErrorCount' => $cellLengthErrorCount,
+            'errorCells' => $errorCells,
+            'errorExcelFile' => $errorExcelFile, // Passer le chemin du fichier Excel
         ]);
+    }
+
+    #[Route('/download-error-excel', name: 'app_download_error_excel')]
+    public function downloadErrorExcel(Request $request, SessionInterface $session, FileService $fileService): Response
+    {
+        // Récupérer les données filtrées de la session
+        $filteredData = $fileService->getDataFromSession($session);
+
+        // Vérifier la longueur des cellules
+        $cellLengthErrorCount = $fileService->checkCellLength($filteredData);
+        $errorCells = $fileService->getErrorCells($filteredData);
+
+        // Générer le fichier Excel avec les cellules en erreur colorées en rouge
+        $errorExcelFile = $fileService->generateErrorExcel($filteredData, $errorCells);
+
+        // Retourner le fichier Excel en réponse
+        return new BinaryFileResponse($errorExcelFile);
     }
 }

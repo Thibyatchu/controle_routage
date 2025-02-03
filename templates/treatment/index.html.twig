@@ -27,10 +27,11 @@
         </div>
     {% endif %}
 
-    {# Affichage du message si des cellules ont moins de 38 caractères #}
+    {# Affichage du message si des cellules ont plus de 38 caractères #}
     {% if cellLengthErrorCount > 0 %}
         <div class="alert alert-danger">
             <strong>Erreur :</strong> Il y a {{ cellLengthErrorCount }} ligne(s) contenant une ou plusieurs cellules avec plus de 38 caractères.
+            <a href="{{ path('app_download_error_excel') }}" class="btn btn-danger mt-2">Télécharger le rapport d'erreurs</a>
         </div>
     {% endif %}
 
@@ -59,8 +60,12 @@
     </div>
 
     <!-- Bouton de retour -->
-    <form action="{{ path('app_display') }}" method="get" class="mt-4">
-        <button class="btn btn-light-warning" type="submit">Retour à l'Affichage</button>
+    <form action="{{ path('app_home') }}" method="get" class="mt-4">
+        <div class="fw-semibold fs-6 text-gray-500 mb-7">
+            Une fois les modifications finies, ainsi que le nouveau fichier téléchargé
+            <br>vous pouvez retourner à la page d'accueil et soumettre un nouveau fichier
+        </div>
+        <button class="btn btn-light-warning" type="submit">Retour à l'Accueil</button>
     </form>
 </div>
 {% endblock %}

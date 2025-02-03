@@ -4,7 +4,11 @@
 namespace App\Service;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Normalizer;
@@ -18,7 +22,7 @@ class FileService
     {
         $fileExtension = strtolower($file->getClientOriginalExtension());
         $validExtensions = ['csv', 'xls', 'xlsx'];
-        
+
         return in_array($fileExtension, $validExtensions);
     }
 
@@ -56,7 +60,6 @@ class FileService
     {
         return $session->get('spreadsheet_data', []);
     }
-    
 
     /**
     * Traite les données en ignorant un nombre de lignes définies au début.
@@ -81,12 +84,12 @@ class FileService
         // Supposons que chaque ligne dans les données a le même nombre de colonnes
         // Récupérer les clés des colonnes (indices numériques) et les convertir en lettres
         $numColumns = count($data[0]);
-        
+
         $letters = [];
         for ($i = 0; $i < $numColumns; $i++) {
             $letters[] = chr(65 + $i); // Convertit l'indice en lettre (A, B, C, ...)
         }
-    
+
         return $letters;
     }
 
@@ -153,18 +156,18 @@ class FileService
     public function generateCsvFromData(array $data): string
     {
         $csvContent = '';
-        
+
         // En-têtes du CSV
         $headers = array_keys($data[0]); // Les clés du premier élément sont les en-têtes
         $csvContent .= implode(';', $headers) . "\n";
-    
+
         // Données
         foreach ($data as $row) {
             $csvContent .= implode(';', $row) . "\n";
         }
-        
+
         return $csvContent;
-    }    
+    }
 
     /**
     * Prépare les données du CSV selon les colonnes sélectionnées et les filtre.
@@ -172,7 +175,7 @@ class FileService
     public function prepareCsvData(array $selectedColumns, array $filteredData): array
     {
         $csvData = [];
-        
+
         // Traiter les colonnes sélectionnées et les organiser
         foreach ($selectedColumns as $colTitle => $colLetters) {
             if ($colLetters) {
@@ -256,7 +259,7 @@ class FileService
         // Convertir la lettre en majuscule et récupérer son code ASCII
         $column = strtoupper($column);
         $index = ord($column) - ord('A') + 0; // A devient 0, B devient 1, etc.
-        
+
         return $index;
     }
 
@@ -271,49 +274,21 @@ class FileService
     }
 
     /**
-    * Passe les lettres minucscules en majuscules
+    * Passe les lettres minuscules en majuscules
     */
     public function transformTextToUppercase(&$data)
     {
         $changed = false;
-        
+
         foreach ($data as &$row) {
             foreach ($row as &$cell) {
                 if (is_string($cell)) {
                     $original = $cell;
-                    
+
                     // Conversion en majuscule
                     $cell = strtoupper($cell);
-                    
-                    // Vérifier si la modification a eu lieu
-                    if ($cell !== $original) {
-                        $changed = true;
-                    }
-                }
-            }
-        }
-    
-        return $changed;
-    }    
 
-    /**
-    * Supprime les accents et les apostrophes
-    */
-    public function removeAccentsAndApostrophes(&$data)
-    {
-        $changed = false;
-        
-        foreach ($data as &$row) {
-            foreach ($row as &$cell) {
-                if (is_string($cell)) {
-                    $original = $cell;
-                    
-                    // Supprimer les accents
-                    $cell = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $cell);
-                    
-                    // Supprimer les apostrophes
-                    $cell = str_replace("'", ' ', $cell);
-                    
+                    // Vérifier si la modification a eu lieu
                     if ($cell !== $original) {
                         $changed = true;
                     }
@@ -325,7 +300,31 @@ class FileService
     }
 
     /**
-    * Compare les pays (pour vérifier uniquement is le pays est français) avant de vérifier si les codes postaux sont valides (5 chiffres)
+    * Supprime les accents et les apostrophes
+    */
+    public function removeAccentsAndApostrophes(&$data)
+    {
+        $changed = false;
+        foreach ($data as $rowIndex => $row) {
+            foreach ($row as $cellIndex => $cell) {
+                $newCell = $this->removeAccents($cell);
+                $newCell = str_replace("'", " ", $newCell);
+                if ($newCell !== $cell) {
+                    $data[$rowIndex][$cellIndex] = $newCell;
+                    $changed = true;
+                }
+            }
+        }
+        return $changed;
+    }
+
+    private function removeAccents($string)
+    {
+        return strtr(utf8_decode($string), utf8_decode('àáâäãåçèéêëìíîïòóôöõùúûüýÿÀÁÂÄÃÅÇÈÉÊËÌÍÎÏÒÓÔÖÕÙÚÛÜÝ'), 'AAAAAACEEEEIIIIOOOOOUUUUYYAAAAAACEEEEIIIIDNOOOOOUUUUY');
+    }
+
+    /**
+    * Compare les pays (pour vérifier uniquement si le pays est français) avant de vérifier si les codes postaux sont valides (5 chiffres)
     */
     public function validatePostalCodes(array &$data, int $postalCodeIndex, int $countryIndex): bool
     {
@@ -353,7 +352,7 @@ class FileService
     }
 
     /**
-    * Vérifie la longueur des cellules et retourne le nombre de lignes avec des cellules < 38 caractères.
+    * Vérifie la longueur des cellules et retourne le nombre de lignes avec des cellules > 38 caractères.
     */
     public function checkCellLength(array &$data): int
     {
@@ -363,7 +362,7 @@ class FileService
             foreach ($row as $cell) {
                 if (is_string($cell) && strlen($cell) > 38) {
                     $errorCount++;
-                    break; // Passer à la ligne suivante dès qu'une cellule < 38 caractères est trouvée
+                    break; // Passer à la ligne suivante dès qu'une cellule > 38 caractères est trouvée
                 }
             }
         }
@@ -372,7 +371,7 @@ class FileService
     }
 
     /**
-    * Retourne les indices des cellules avec des erreurs (cellules < 38 caractères).
+    * Retourne les indices des cellules avec des erreurs (cellules > 38 caractères).
     */
     public function getErrorCells(array &$data): array
     {
@@ -387,5 +386,37 @@ class FileService
         }
 
         return $errorCells;
+    }
+
+    /**
+     * Génère un fichier Excel avec les cellules en erreur colorées en rouge.
+     */
+    public function generateErrorExcel(array $data, array $errorCells): string
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Ajouter les données au fichier Excel
+        foreach ($data as $rowIndex => $row) {
+            foreach ($row as $cellIndex => $cell) {
+                $cellCoordinate = $this->transformIndexToLetter($cellIndex) . ($rowIndex + 1);
+                $sheet->setCellValue($cellCoordinate, $cell);
+
+                // Colorer les cellules en erreur en rouge
+                if (in_array([$rowIndex, $cellIndex], $errorCells)) {
+                    $sheet->getStyle($cellCoordinate)
+                        ->getFill()
+                        ->setFillType(Fill::FILL_SOLID)
+                        ->getStartColor()
+                        ->setARGB('FFFF0000');
+                }
+            }
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $tempFile = tempnam(sys_get_temp_dir(), 'error_excel_') . '.xlsx';
+        $writer->save($tempFile);
+
+        return $tempFile;
     }
 }
