@@ -1,7 +1,5 @@
 <?php
 
-// src/Controller/TreatmentController.php
-
 namespace App\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
@@ -175,4 +173,61 @@ class TreatmentController extends AbstractController
         // Retourner le fichier Excel en réponse
         return new BinaryFileResponse($errorExcelFile);
     }
+
+    #[Route('/replay', name: 'app_replay')]
+    public function replay(Request $request, SessionInterface $session, FileService $fileService): Response
+    {
+        // Récupérer le fichier importé
+        $correctedFile = $request->files->get('file');
+
+        if (!$correctedFile) {
+            $this->addFlash('error', 'Aucun fichier n\'a été importé.');
+            return $this->redirectToRoute('app_treatment');
+        }
+
+        // Valider l'extension du fichier
+        if (!$fileService->validateFileExtension($correctedFile)) {
+            $this->addFlash('error', 'Le fichier importé n\'est pas valide. Veuillez importer un fichier CSV, XLS ou XLSX.');
+            return $this->redirectToRoute('app_treatment');
+        }
+
+        // Charger les données du fichier importé
+        $correctedFilePath = $correctedFile->getPathname();
+        $correctedData = $fileService->loadSpreadsheetData($correctedFilePath);
+
+        // Stocker les données dans la session
+        $fileService->storeDataInSession($correctedData, $session);
+
+        // Récupérer les données modifiées de la session
+        $filteredData = $fileService->getDataFromSession($session);
+
+        // Récupérer les colonnes sélectionnées et leurs titres
+        $selectedColumnsIndexes = $session->get('selected_columns', []);
+        $selectedColumnTitles = [
+            'raison_social' => 'Raison Sociale',
+            'civilite_nom_prenom' => 'Civilité, Nom, Prénom',
+            'adresse_1' => 'Adresse 1',
+            'adresse_2' => 'Adresse 2',
+            'adresse_3' => 'Adresse 3',
+            'code_postal' => 'Code Postal',
+            'ville' => 'Ville',
+            'pays' => 'Pays'
+        ];
+
+        // Filtrer les données en utilisant les indices de colonne
+        $dataToDisplay = array_map(function ($row) use ($selectedColumnsIndexes) {
+            return array_intersect_key($row, array_flip($selectedColumnsIndexes));
+        }, $filteredData);
+
+        // Limiter l'affichage à 10 lignes
+        $dataToDisplay = array_slice($dataToDisplay, 0, 10);
+
+        $this->addFlash('success', 'Le fichier corrigé a été importé avec succès.');
+        return $this->render('treatment/replay.html.twig', [
+            'filtered_data' => $dataToDisplay,
+            'selected_columns' => $selectedColumnsIndexes,
+            'selected_column_titles' => $selectedColumnTitles,
+        ]);
+    }
+
 }

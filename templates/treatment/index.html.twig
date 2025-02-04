@@ -28,12 +28,18 @@
     {% endif %}
 
     {# Affichage du message si des cellules ont plus de 38 caractères #}
-    {% if cellLengthErrorCount > 0 %}
-        <div class="alert alert-danger">
-            <strong>Erreur :</strong> Il y a {{ cellLengthErrorCount }} ligne(s) contenant une ou plusieurs cellules avec plus de 38 caractères.
-            <a href="{{ path('app_download_error_excel') }}" class="btn btn-danger mt-2">Télécharger le rapport d'erreurs</a>
-        </div>
-    {% endif %}
+{% if cellLengthErrorCount > 0 %}
+    <div class="alert alert-danger">
+        <strong>Erreur :</strong> Il y a {{ cellLengthErrorCount }} ligne(s) contenant une ou plusieurs cellules avec plus de 38 caractères.<br>
+        Téléchargez le rapport d'erreur pour corriger les erreurs :<br>
+        <a href="{{ path('app_download_error_excel') }}" class="btn btn-light-danger mt-2">Télécharger le rapport d'erreurs</a>
+        <form action="{{ path('app_replay') }}" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" id="file" accept=".csv, .xls, .xlsx" class="form-control mb-3" required>
+            <button type="submit" class="btn btn-light-primary">Importer le fichier corrigé</button>
+        </form>
+    </div>
+{% endif %}
+
 
     <!-- Tableau des données -->
     <div class="table-responsive">

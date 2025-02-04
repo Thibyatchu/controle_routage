@@ -389,29 +389,44 @@ class FileService
     }
 
     /**
-     * Génère un fichier Excel avec les cellules en erreur colorées en rouge.
-     */
+    * Génère un fichier Excel avec les cellules en erreur colorées en rouge.
+    */
     public function generateErrorExcel(array $data, array $errorCells): string
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Ajouter les données au fichier Excel
-        foreach ($data as $rowIndex => $row) {
-            foreach ($row as $cellIndex => $cell) {
-                $cellCoordinate = $this->transformIndexToLetter($cellIndex) . ($rowIndex + 1);
-                $sheet->setCellValue($cellCoordinate, $cell);
-
-                // Colorer les cellules en erreur en rouge
-                if (in_array([$rowIndex, $cellIndex], $errorCells)) {
-                    $sheet->getStyle($cellCoordinate)
-                        ->getFill()
-                        ->setFillType(Fill::FILL_SOLID)
-                        ->getStartColor()
-                        ->setARGB('FFFF0000');
-                }
+        // Filtrer les lignes avec des erreurs
+        $errorRows = [];
+        foreach ($errorCells as $errorCell) {
+            $rowIndex = $errorCell[0];
+            if (!isset($errorRows[$rowIndex])) {
+                $errorRows[$rowIndex] = $data[$rowIndex];
             }
         }
+
+        // Ajouter les données au fichier Excel
+        $rowIndex = 1; // Première ligne Excel
+        foreach ($errorRows as $originalRowIndex => $row) { // Garde la correspondance avec les indices originaux
+            $colIndex = 0;
+            foreach ($row as $cell) {
+                $cellCoordinate = $this->transformIndexToLetter($colIndex) . $rowIndex;
+                $sheet->setCellValue($cellCoordinate, $cell);
+        
+                // Vérifier si cette cellule est une cellule en erreur
+                foreach ($errorCells as $errorCell) {
+                    if ($errorCell[0] == $originalRowIndex && $errorCell[1] == $colIndex) {
+                        $sheet->getStyle($cellCoordinate)
+                            ->getFill()
+                            ->setFillType(Fill::FILL_SOLID)
+                            ->getStartColor()
+                            ->setARGB('FFFF0000');
+                    }
+                }
+                $colIndex++;
+            }
+            $rowIndex++;
+        }    
 
         $writer = new Xlsx($spreadsheet);
         $tempFile = tempnam(sys_get_temp_dir(), 'error_excel_') . '.xlsx';
