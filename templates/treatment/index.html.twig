@@ -1,26 +1,24 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Traitement des données{% endblock %}
+{% block title %}Résultat{% endblock %}
 
 {% block body %}
 <div class="container">
-    <h1 class="my-4">Affichage des données traitées</h1>
+    <h1 class="my-4">Traitement des données</h1>
 
-    {# Affichage du message si des lettres ont été mises en majuscules #}
+    {# Affichage des messages d'information #}
     {% if changedUppercase %}
         <div class="alert alert-info">
             <strong>Note :</strong> Toutes les lettres minuscules dans le fichier ont été converties en majuscules.
         </div>
     {% endif %}
 
-    {# Affichage du message si des accents ou des apostrophes ont été supprimés #}
     {% if changedAccentsApostrophes %}
         <div class="alert alert-info">
             <strong>Note :</strong> Tous les accents ont été enlevés et les apostrophes ont été supprimées.
         </div>
     {% endif %}
 
-    {# Affichage du message si des codes postaux ont été modifiés #}
     {% if changedPostalCodes %}
         <div class="alert alert-info">
             <strong>Note :</strong> Les codes postaux ont été vérifiés et corrigés si nécessaire (ajout de zéros devant pour les codes français en cas d'oublie).
@@ -28,18 +26,17 @@
     {% endif %}
 
     {# Affichage du message si des cellules ont plus de 38 caractères #}
-{% if cellLengthErrorCount > 0 %}
-    <div class="alert alert-danger">
-        <strong>Erreur :</strong> Il y a {{ cellLengthErrorCount }} ligne(s) contenant une ou plusieurs cellules avec plus de 38 caractères.<br>
-        Téléchargez le rapport d'erreur pour corriger les erreurs :<br>
-        <a href="{{ path('app_download_error_excel') }}" class="btn btn-light-danger mt-2">Télécharger le rapport d'erreurs</a>
-        <form action="{{ path('app_replay') }}" method="post" enctype="multipart/form-data">
-            <input type="file" name="file" id="file" accept=".csv, .xls, .xlsx" class="form-control mb-3" required>
-            <button type="submit" class="btn btn-light-primary">Importer le fichier corrigé</button>
-        </form>
-    </div>
-{% endif %}
-
+    {% if cellLengthErrorCount > 0 %}
+        <div class="alert alert-danger">
+            <strong>Erreur :</strong> Il y a {{ cellLengthErrorCount }} ligne(s) contenant une ou plusieurs cellules avec plus de 38 caractères.<br>
+            Téléchargez le rapport d'erreur pour corriger les erreurs :<br>
+            <a href="{{ path('app_download_error_excel') }}" class="btn btn-light-danger mt-2">Télécharger le rapport d'erreurs</a>
+            <form action="{{ path('app_treatment') }}" method="post" enctype="multipart/form-data">
+                <input type="file" name="file" id="file" accept=".csv, .xls, .xlsx" class="form-control mb-3" required>
+                <button type="submit" class="btn btn-light-primary">Importer le fichier corrigé</button>
+            </form>
+        </div>
+    {% endif %}
 
     <!-- Tableau des données -->
     <div class="table-responsive">
@@ -47,7 +44,7 @@
             <thead>
                 <tr>
                     {% for title in selected_column_titles %}
-                        <th>{{ title|default('') }}</th>  {# Assurez-vous d'afficher un en-tête vide si nécessaire #}
+                        <th>{{ title|default('') }}</th>
                     {% endfor %}
                 </tr>
             </thead>
@@ -68,10 +65,17 @@
     <!-- Bouton de retour -->
     <form action="{{ path('app_home') }}" method="get" class="mt-4">
         <div class="fw-semibold fs-6 text-gray-500 mb-7">
-            Une fois les modifications finies, ainsi que le nouveau fichier téléchargé
+            Une fois les modifications finies, ainsi que le nouveau fichier téléchargé,
             <br>vous pouvez retourner à la page d'accueil et soumettre un nouveau fichier
         </div>
         <button class="btn btn-light-warning" type="submit">Retour à l'Accueil</button>
     </form>
+
+    <!-- Bouton pour télécharger le fichier complet -->
+    {% if cellLengthErrorCount == 0 %}
+        <form action="{{ path('app_download_complete_excel') }}" method="get" class="mt-4">
+            <button class="btn btn-light-success" type="submit">Télécharger le fichier complet</button>
+        </form>
+    {% endif %}
 </div>
 {% endblock %}

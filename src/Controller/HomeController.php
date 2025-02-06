@@ -30,6 +30,18 @@ class HomeController extends AbstractController
             // Charger les données du fichier
             $data = $fileService->loadSpreadsheetData($filePath);
 
+            // Vérifier le nombre de lignes
+            $lineCount = count($data);
+            $maxLines = 1510;
+
+            if ($lineCount > $maxLines) {
+                // Calculer le nombre de lignes à retirer
+                $linesToRemove = $lineCount - $maxLines;
+                // Ajouter un message d'erreur à la session
+                $this->addFlash('error', "Le fichier contient trop de lignes. Veuillez réduire le fichier de $linesToRemove lignes.");
+                return $this->redirectToRoute('app_home');
+            }
+
             // Enregistrer les données dans la session pour les utiliser dans la page d'affichage
             $session = $request->getSession();
             $fileService->storeDataInSession($data, $session);
@@ -41,3 +53,5 @@ class HomeController extends AbstractController
         return $this->render('home/index.html.twig');
     }
 }
+
+

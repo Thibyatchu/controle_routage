@@ -1,5 +1,6 @@
 <?php
 
+// src/Controller/TreatmentController.php
 namespace App\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
@@ -10,10 +11,12 @@ use Symfony\Component\Routing\Annotation\Route;
 use App\Service\FileService;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 class TreatmentController extends AbstractController
 {
-    #[Route('/treatment', name: 'app_treatment')]
+    #[Route('/treatment', name: 'app_treatment', methods: ['GET', 'POST'])]
     public function index(Request $request, SessionInterface $session, FileService $fileService): Response
     {
         // Récupérer l'option d'ignorance des lignes depuis la session
@@ -139,10 +142,57 @@ class TreatmentController extends AbstractController
         $cellLengthErrorCount = $fileService->checkCellLength($filteredData);
         $errorCells = $fileService->getErrorCells($filteredData);
 
-        // Générer le fichier Excel avec les cellules en erreur colorées en rouge
-        $errorExcelFile = $fileService->generateErrorExcel($filteredData, $errorCells);
+        // Récupérer les indices des lignes d'erreur
+        $errorRowIndices = $fileService->getErrorRowIndices($filteredData);
 
-        // Passer les données à la vue avec les colonnes sélectionnées et leurs titres
+        // Stocker le fichier principal sans les lignes d'erreur dans la session
+        $mainDataWithoutErrors = $fileService->filterDataBySelectedRows($filteredData, $errorRowIndices);
+        $session->set('main_data_without_errors', $mainDataWithoutErrors);
+
+        // Réimportation du fichier corrigé
+        if ($request->isMethod('POST') && $request->files->has('file')) {
+            $correctedFile = $request->files->get('file');
+
+            if (!$fileService->validateFileExtension($correctedFile)) {
+                $this->addFlash('error', 'Le fichier importé n\'est pas valide. Veuillez importer un fichier CSV, XLS ou XLSX.');
+                return $this->redirectToRoute('app_treatment');
+            }
+
+            $correctedFilePath = $correctedFile->getPathname();
+            $correctedData = $fileService->loadSpreadsheetData($correctedFilePath);
+
+            // Récupérer le fichier principal sans les lignes d'erreur depuis la session
+            $mainDataWithoutErrors = $session->get('main_data_without_errors', []);
+
+            // Combler les trous avec les lignes corrigées
+            foreach ($correctedData as $index => $correctedRow) {
+                if (isset($errorRowIndices[$index])) {
+                    $mainDataWithoutErrors[$errorRowIndices[$index]] = $correctedRow;
+                }
+            }
+
+            // Stocker les données fusionnées dans la session
+            $fileService->storeDataInSession($mainDataWithoutErrors, $session);
+
+            // Récupérer les données fusionnées de la session
+            $filteredData = $fileService->getDataFromSession($session);
+
+            // Vérifier la longueur des cellules
+            $cellLengthErrorCount = $fileService->checkCellLength($filteredData);
+            $errorCells = $fileService->getErrorCells($filteredData);
+
+            // Filtrer les données en utilisant les indices de colonne
+            $dataToDisplay = array_map(function ($row) use ($selectedColumnsIndexes) {
+                return array_intersect_key($row, array_flip($selectedColumnsIndexes));
+            }, $filteredData);
+
+            // Limiter l'affichage à 10 lignes
+            $dataToDisplay = array_slice($dataToDisplay, 0, 10);
+
+            $this->addFlash('success', 'Le fichier corrigé a été importé avec succès.');
+        }
+
+        // Passer le chemin du fichier temporaire à la vue
         return $this->render('treatment/index.html.twig', [
             'filtered_data' => $dataToDisplay,
             'selected_columns' => $selectedColumnsIndexes,
@@ -153,7 +203,6 @@ class TreatmentController extends AbstractController
             'changedPostalCodes' => $changedPostalCodes,
             'cellLengthErrorCount' => $cellLengthErrorCount,
             'errorCells' => $errorCells,
-            'errorExcelFile' => $errorExcelFile, // Passer le chemin du fichier Excel
         ]);
     }
 
@@ -174,31 +223,10 @@ class TreatmentController extends AbstractController
         return new BinaryFileResponse($errorExcelFile);
     }
 
-    #[Route('/replay', name: 'app_replay')]
-    public function replay(Request $request, SessionInterface $session, FileService $fileService): Response
+    #[Route('/download-complete-excel', name: 'app_download_complete_excel')]
+    public function downloadCompleteExcel(Request $request, SessionInterface $session, FileService $fileService): Response
     {
-        // Récupérer le fichier importé
-        $correctedFile = $request->files->get('file');
-
-        if (!$correctedFile) {
-            $this->addFlash('error', 'Aucun fichier n\'a été importé.');
-            return $this->redirectToRoute('app_treatment');
-        }
-
-        // Valider l'extension du fichier
-        if (!$fileService->validateFileExtension($correctedFile)) {
-            $this->addFlash('error', 'Le fichier importé n\'est pas valide. Veuillez importer un fichier CSV, XLS ou XLSX.');
-            return $this->redirectToRoute('app_treatment');
-        }
-
-        // Charger les données du fichier importé
-        $correctedFilePath = $correctedFile->getPathname();
-        $correctedData = $fileService->loadSpreadsheetData($correctedFilePath);
-
-        // Stocker les données dans la session
-        $fileService->storeDataInSession($correctedData, $session);
-
-        // Récupérer les données modifiées de la session
+        // Récupérer les données filtrées de la session
         $filteredData = $fileService->getDataFromSession($session);
 
         // Récupérer les colonnes sélectionnées et leurs titres
@@ -219,15 +247,28 @@ class TreatmentController extends AbstractController
             return array_intersect_key($row, array_flip($selectedColumnsIndexes));
         }, $filteredData);
 
-        // Limiter l'affichage à 10 lignes
-        $dataToDisplay = array_slice($dataToDisplay, 0, 10);
+        // Générer un fichier Excel avec les données filtrées
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
 
-        $this->addFlash('success', 'Le fichier corrigé a été importé avec succès.');
-        return $this->render('treatment/replay.html.twig', [
-            'filtered_data' => $dataToDisplay,
-            'selected_columns' => $selectedColumnsIndexes,
-            'selected_column_titles' => $selectedColumnTitles,
+        // Ajouter les en-têtes
+        $headerRow = [];
+        foreach ($selectedColumnsIndexes as $index) {
+            $headerRow[] = $selectedColumnTitles[$index] ?? '';
+        }
+        $sheet->fromArray($headerRow, NULL, 'A1');
+
+        // Ajouter les données
+        $sheet->fromArray($dataToDisplay, NULL, 'A2');
+
+        $writer = new Xlsx($spreadsheet);
+        $tempFile = tempnam(sys_get_temp_dir(), 'complete_excel_') . '.xlsx';
+        $writer->save($tempFile);
+
+        // Retourner le fichier Excel en réponse
+        return new BinaryFileResponse($tempFile, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="complete_excel.xlsx"',
         ]);
     }
-
 }

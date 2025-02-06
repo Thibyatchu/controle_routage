@@ -434,4 +434,42 @@ class FileService
 
         return $tempFile;
     }
+
+    /**
+     * Filtre les données en fonction des lignes sélectionnées.
+     *
+     * @param array $data Les données à filtrer.
+     * @param array $selectedRows Les indices des lignes sélectionnées.
+     * @return array Les données filtrées.
+     */
+    public function filterDataBySelectedRows(array $data, array $selectedRows): array
+    {
+        $filteredData = [];
+        foreach ($selectedRows as $rowIndex) {
+            if (isset($data[$rowIndex])) {
+                $filteredData[] = $data[$rowIndex];
+            }
+        }
+        return $filteredData;
+    }
+
+    /**
+     * Récupère les indices des lignes contenant des erreurs.
+     *
+     * @param array $data Les données à vérifier.
+     * @return array Les indices des lignes contenant des erreurs.
+     */
+    public function getErrorRowIndices(array $data): array
+    {
+        $errorRowIndices = [];
+        foreach ($data as $rowIndex => $row) {
+            foreach ($row as $cell) {
+                if (is_string($cell) && strlen($cell) > 38) {
+                    $errorRowIndices[] = $rowIndex;
+                    break; // Passer à la ligne suivante dès qu'une cellule > 38 caractères est trouvée
+                }
+            }
+        }
+        return $errorRowIndices;
+    }
 }
