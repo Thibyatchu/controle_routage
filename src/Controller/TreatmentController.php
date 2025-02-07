@@ -1,6 +1,5 @@
 <?php
 
-// src/Controller/TreatmentController.php
 namespace App\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
@@ -42,7 +41,7 @@ class TreatmentController extends AbstractController
         // Appliquer la suppression des accents et des apostrophes
         $changedAccentsApostrophes = $fileService->removeAccentsAndApostrophes($filteredData);
 
-        // **APPLIQUER L'IGNORANCE DES LIGNES**
+        // Appliquer l'ignorance des lignes
         $filteredData = $fileService->ignoreFirstRows($filteredData, $ignoreFirstRows, $session);
 
         // Récupérer les colonnes sélectionnées
@@ -89,14 +88,12 @@ class TreatmentController extends AbstractController
         }
 
         if (!empty($civiliteNomPrenom)) {
-            // Ajout de la première colonne avec son titre
             $selectedColumnsIndexes[] = $fileService->columnToIndex($civiliteNomPrenom[0]);
             $selectedColumnTitles[] = $filterTitles['civilite_nom_prenom'];
 
-            // Ajout des autres colonnes sans titre
             foreach (array_slice($civiliteNomPrenom, 1) as $column) {
                 $selectedColumnsIndexes[] = $fileService->columnToIndex($column);
-                $selectedColumnTitles[] = ''; // L'en-tête sera vide pour les autres colonnes
+                $selectedColumnTitles[] = '';
             }
         }
 
@@ -164,15 +161,11 @@ class TreatmentController extends AbstractController
             // Récupérer le fichier principal sans les lignes d'erreur depuis la session
             $mainDataWithoutErrors = $session->get('main_data_without_errors', []);
 
-            // Combler les trous avec les lignes corrigées
-            foreach ($correctedData as $index => $correctedRow) {
-                if (isset($errorRowIndices[$index])) {
-                    $mainDataWithoutErrors[$errorRowIndices[$index]] = $correctedRow;
-                }
-            }
+            // Fusionner les données
+            $mergedData = $this->mergeCorrectedData($mainDataWithoutErrors, $correctedData, $errorRowIndices);
 
             // Stocker les données fusionnées dans la session
-            $fileService->storeDataInSession($mainDataWithoutErrors, $session);
+            $fileService->storeDataInSession($mergedData, $session);
 
             // Récupérer les données fusionnées de la session
             $filteredData = $fileService->getDataFromSession($session);
@@ -206,6 +199,17 @@ class TreatmentController extends AbstractController
         ]);
     }
 
+    // Méthode pour fusionner les données corrigées avec les données temporaires
+    private function mergeCorrectedData(array $mainData, array $correctedData, array $errorRowIndices): array
+    {
+        foreach ($correctedData as $index => $correctedRow) {
+            if (isset($errorRowIndices[$index])) {
+                $mainData[$errorRowIndices[$index]] = $correctedRow;
+            }
+        }
+        return $mainData;
+    }
+
     #[Route('/download-error-excel', name: 'app_download_error_excel')]
     public function downloadErrorExcel(Request $request, SessionInterface $session, FileService $fileService): Response
     {
@@ -223,8 +227,8 @@ class TreatmentController extends AbstractController
         return new BinaryFileResponse($errorExcelFile);
     }
 
-    #[Route('/download-complete-excel', name: 'app_download_complete_excel')]
-    public function downloadCompleteExcel(Request $request, SessionInterface $session, FileService $fileService): Response
+    #[Route('/download-valid-excel', name: 'app_download_valid_excel')]
+    public function downloadValidExcel(Request $request, SessionInterface $session, FileService $fileService): Response
     {
         // Récupérer les données filtrées de la session
         $filteredData = $fileService->getDataFromSession($session);
@@ -262,13 +266,14 @@ class TreatmentController extends AbstractController
         $sheet->fromArray($dataToDisplay, NULL, 'A2');
 
         $writer = new Xlsx($spreadsheet);
-        $tempFile = tempnam(sys_get_temp_dir(), 'complete_excel_') . '.xlsx';
+        $tempFile = tempnam(sys_get_temp_dir(), 'valid_excel_') . '.xlsx';
         $writer->save($tempFile);
 
         // Retourner le fichier Excel en réponse
         return new BinaryFileResponse($tempFile, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="complete_excel.xlsx"',
+            'Content-Disposition' => 'attachment; filename="valid_excel.xlsx"',
         ]);
     }
+
 }

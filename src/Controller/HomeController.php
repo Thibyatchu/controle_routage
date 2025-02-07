@@ -27,18 +27,26 @@ class HomeController extends AbstractController
                 return $this->redirectToRoute('app_home');
             }
 
-            // Charger les données du fichier
-            $data = $fileService->loadSpreadsheetData($filePath);
+            // Vérifier la taille du fichier
+            $maxSizeInBytes = 134217728; // 128 Mo
+            $fileSize = $file->getSize();
 
-            // Vérifier le nombre de lignes
-            $lineCount = count($data);
-            $maxLines = 1510;
+            if ($fileSize > $maxSizeInBytes) {
+                // Calculer la taille à réduire
+                $sizeToReduce = $fileSize - $maxSizeInBytes;
+                $sizeToReduceInMo = $sizeToReduce / (1024 * 1024); // Convertir en Mo
 
-            if ($lineCount > $maxLines) {
-                // Calculer le nombre de lignes à retirer
-                $linesToRemove = $lineCount - $maxLines;
                 // Ajouter un message d'erreur à la session
-                $this->addFlash('error', "Le fichier contient trop de lignes. Veuillez réduire le fichier de $linesToRemove lignes.");
+                $this->addFlash('error', "Le fichier est trop volumineux. Veuillez réduire sa taille de " . round($sizeToReduceInMo, 2) . " Mo.");
+                return $this->redirectToRoute('app_home');
+            }
+
+            // Charger les données du fichier
+            try {
+                $data = $fileService->loadSpreadsheetData($filePath);
+            } catch (\PhpOffice\PhpSpreadsheet\Exception $e) {
+                // Ajouter un message d'erreur en cas d'échec du chargement
+                $this->addFlash('error', "Erreur lors du chargement du fichier : " . $e->getMessage());
                 return $this->redirectToRoute('app_home');
             }
 
@@ -53,5 +61,3 @@ class HomeController extends AbstractController
         return $this->render('home/index.html.twig');
     }
 }
-
-

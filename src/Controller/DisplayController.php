@@ -17,7 +17,7 @@ class DisplayController extends AbstractController
     {
         // Récupérer l'option d'ignorance des lignes
         $ignoreFirstRows = $request->get('ignore_first_rows', 'none');
-        
+
         // Enregistrer cette option dans la session pour la réutiliser dans la page /treatment
         $session->set('ignore_first_rows', $ignoreFirstRows);
 
@@ -51,6 +51,20 @@ class DisplayController extends AbstractController
 
         // Calculer les lettres des colonnes (A, B, C, etc.)
         $colLetters = $fileService->getColumnLetters($filteredData);
+
+        // Vérifier la taille des données
+        $maxSizeInBytes = 134217728; // 128 Mo
+        $dataSize = strlen(serialize($data));
+
+        if ($dataSize > $maxSizeInBytes) {
+            // Calculer la taille à réduire
+            $sizeToReduce = $dataSize - $maxSizeInBytes;
+            $sizeToReduceInMo = $sizeToReduce / (1024 * 1024); // Convertir en Mo
+
+            // Ajouter un message d'erreur à la session
+            $this->addFlash('error', "Le fichier est trop volumineux. Veuillez réduire sa taille de " . round($sizeToReduceInMo, 2) . " Mo.");
+            return $this->redirectToRoute('app_display');
+        }
 
         return $this->render('display/index.html.twig', [
             'data' => $filteredData,  // Afficher les données filtrées
