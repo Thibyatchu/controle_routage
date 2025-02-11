@@ -73,9 +73,9 @@
 
 <!-- Bouton pour télécharger le fichier valide -->
 {% if cellLengthErrorCount == 0 %}
-    <form action="{{ path('app_download_valid_excel') }}" method="get" class="mt-4">
-        <button class="btn btn-light-success" type="submit">Télécharger le fichier valide</button>
-    </form>
+<form action="{{ path('app_download_valid_excel') }}" method="get" class="mt-4">
+    <button class="btn btn-light-success" type="submit">Télécharger le fichier filtré</button>
+</form>
 {% endif %}
 
 </div>

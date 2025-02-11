@@ -12,9 +12,16 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TreatmentController extends AbstractController
 {
+    public function __construct()
+    {
+        // Augmenter la limite de mémoire ici
+        ini_set('memory_limit', '256M');
+    }
+
     #[Route('/treatment', name: 'app_treatment', methods: ['GET', 'POST'])]
     public function index(Request $request, SessionInterface $session, FileService $fileService): Response
     {
@@ -30,19 +37,15 @@ class TreatmentController extends AbstractController
             return $this->redirectToRoute('app_display');
         }
 
+        // Appliquer les transformations
+        $fileService->applyTransformations($filteredData);
+
         // Variables pour savoir si un changement a été effectué
-        $changedUppercase = false;
-        $changedAccentsApostrophes = false;
-        $changedPostalCodes = false;
-
-        // Appliquer la transformation des lettres minuscules en majuscules
         $changedUppercase = $fileService->transformTextToUppercase($filteredData);
-
-        // Appliquer la suppression des accents et des apostrophes
         $changedAccentsApostrophes = $fileService->removeAccentsAndApostrophes($filteredData);
 
         // Appliquer l'ignorance des lignes
-        $filteredData = $fileService->ignoreFirstRows($filteredData, $ignoreFirstRows, $session);
+        $filteredData = $fileService->ignoreFirstRows($filteredData, $ignoreFirstRows);
 
         // Récupérer les colonnes sélectionnées
         $codePostal = $request->get('code_postal', '');
@@ -125,6 +128,12 @@ class TreatmentController extends AbstractController
         if (!empty($pays)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($pays);
             $selectedColumnTitles[] = $filterTitles['pays'];
+        }
+
+        // Valider les colonnes sélectionnées
+        if (!$fileService->validateSelectedColumns($filteredData, $selectedColumnsIndexes)) {
+            $this->addFlash('error', 'Une ou plusieurs colonnes sélectionnées n\'existent pas dans les données.');
+            return $this->redirectToRoute('app_display');
         }
 
         // Filtrer les données en utilisant ces indices de colonne
@@ -227,11 +236,17 @@ class TreatmentController extends AbstractController
         return new BinaryFileResponse($errorExcelFile);
     }
 
-    #[Route('/download-valid-excel', name: 'app_download_valid_excel')]
+    #[Route('/download-valid-excel', name: 'app_download_valid_excel', methods: ['GET'])]
     public function downloadValidExcel(Request $request, SessionInterface $session, FileService $fileService): Response
     {
         // Récupérer les données filtrées de la session
         $filteredData = $fileService->getDataFromSession($session);
+
+        // Vérifier si des données sont présentes
+        if (empty($filteredData)) {
+            $this->addFlash('error', 'Aucune donnée disponible pour générer le fichier.');
+            return $this->redirectToRoute('app_display');
+        }
 
         // Récupérer les colonnes sélectionnées et leurs titres
         $selectedColumnsIndexes = $session->get('selected_columns', []);
@@ -260,7 +275,7 @@ class TreatmentController extends AbstractController
         foreach ($selectedColumnsIndexes as $index) {
             $headerRow[] = $selectedColumnTitles[$index] ?? '';
         }
-        $sheet->fromArray($headerRow, NULL, 'A1');
+        $sheet->fromArray([$headerRow], NULL, 'A1');
 
         // Ajouter les données
         $sheet->fromArray($dataToDisplay, NULL, 'A2');
@@ -275,5 +290,4 @@ class TreatmentController extends AbstractController
             'Content-Disposition' => 'attachment; filename="valid_excel.xlsx"',
         ]);
     }
-
 }

@@ -23,7 +23,19 @@ class FileService
         $fileExtension = strtolower($file->getClientOriginalExtension());
         $validExtensions = ['csv', 'xls', 'xlsx'];
 
-        return in_array($fileExtension, $validExtensions);
+        if (!in_array($fileExtension, $validExtensions)) {
+            return false;
+        }
+
+        // Vérification supplémentaire du type MIME
+        $mimeType = $file->getMimeType();
+        $validMimeTypes = [
+            'text/csv',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        ];
+
+        return in_array($mimeType, $validMimeTypes);
     }
 
     /**
@@ -472,4 +484,35 @@ class FileService
         }
         return $errorRowIndices;
     }
+
+    public function validateSelectedColumns(array $data, array $selectedColumns): bool
+    {
+        $availableColumns = array_keys($data[0]);
+        foreach ($selectedColumns as $column) {
+            if (!in_array($column, $availableColumns)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public function processDataInBatches(array $data, callable $callback, int $batchSize = 100): array
+    {
+        $processedData = [];
+        $totalRows = count($data);
+
+        for ($i = 0; $i < $totalRows; $i += $batchSize) {
+            $batch = array_slice($data, $i, $batchSize);
+            $processedData = array_merge($processedData, $callback($batch));
+        }
+
+        return $processedData;
+    }
+
+    public function applyTransformations(array &$data)
+    {
+        $this->transformTextToUppercase($data);
+        $this->removeAccentsAndApostrophes($data);
+    }
+
 }
