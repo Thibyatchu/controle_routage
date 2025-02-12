@@ -295,15 +295,8 @@ class FileService
         foreach ($data as &$row) {
             foreach ($row as &$cell) {
                 if (is_string($cell)) {
-                    $original = $cell;
-
-                    // Conversion en majuscule
+                    $changed = true;
                     $cell = strtoupper($cell);
-
-                    // Vérifier si la modification a eu lieu
-                    if ($cell !== $original) {
-                        $changed = true;
-                    }
                 }
             }
         }
@@ -511,8 +504,8 @@ class FileService
 
     public function applyTransformations(array &$data)
     {
-        $this->transformTextToUppercase($data);
         $this->removeAccentsAndApostrophes($data);
+        $this->transformTextToUppercase($data);
     }
 
 }

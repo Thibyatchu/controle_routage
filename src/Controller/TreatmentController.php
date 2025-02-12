@@ -19,12 +19,17 @@ class TreatmentController extends AbstractController
     public function __construct()
     {
         // Augmenter la limite de mémoire ici
-        ini_set('memory_limit', '256M');
+        ini_set('memory_limit', '600M');
     }
 
     #[Route('/treatment', name: 'app_treatment', methods: ['GET', 'POST'])]
     public function index(Request $request, SessionInterface $session, FileService $fileService): Response
     {
+        // Initialisation par défaut
+        $changedUppercase = false;
+        $changedAccentsApostrophes = false;
+        $changedPostalCodes = false;
+
         // Récupérer l'option d'ignorance des lignes depuis la session
         $ignoreFirstRows = $session->get('ignore_first_rows', 'none');
 
@@ -288,6 +293,37 @@ class TreatmentController extends AbstractController
         return new BinaryFileResponse($tempFile, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => 'attachment; filename="valid_excel.xlsx"',
+        ]);
+    }
+
+    #[Route('/update-data', name: 'app_update_data', methods: ['POST'])]
+    public function updateData(Request $request, SessionInterface $session, FileService $fileService): Response
+    {
+        $data = $request->request->get('data');
+
+        // Mettre à jour les données dans la session
+        $filteredData = $fileService->getDataFromSession($session);
+        foreach ($data as $rowIndex => $row) {
+            foreach ($row as $cellIndex => $value) {
+                $filteredData[$rowIndex][$cellIndex] = $value;
+            }
+        }
+        $fileService->storeDataInSession($filteredData, $session);
+
+        // Revalider les données
+        $cellLengthErrorCount = $fileService->checkCellLength($filteredData);
+        $errorCells = $fileService->getErrorCells($filteredData);
+
+        return $this->render('treatment/index.html.twig', [
+            'filtered_data' => $filteredData,
+            'selected_columns' => $session->get('selected_columns', []),
+            'selected_column_titles' => $session->get('selected_column_titles', []),
+            'fileService' => $fileService,
+            'changedUppercase' => $session->get('changedUppercase', false),
+            'changedAccentsApostrophes' => $session->get('changedAccentsApostrophes', false),
+            'changedPostalCodes' => $session->get('changedPostalCodes', false),
+            'cellLengthErrorCount' => $cellLengthErrorCount,
+            'errorCells' => $errorCells,
         ]);
     }
 }
