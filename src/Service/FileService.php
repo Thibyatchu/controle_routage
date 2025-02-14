@@ -1,6 +1,5 @@
 <?php
 
-// src/Service/FileService.php
 namespace App\Service;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -11,13 +10,42 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpFoundation\Request;
-use Normalizer;
 
 class FileService
 {
+    private $cache = [];
+
+    public function loadSpreadsheetData($filePath)
+    {
+        if (isset($this->cache[$filePath])) {
+            return $this->cache[$filePath];
+        }
+
+        $data = $this->loadDataFromFile($filePath);
+        $this->cache[$filePath] = $data;
+
+        return $data;
+    }
+
+    private function loadDataFromFile($filePath)
+    {
+        $spreadsheet = IOFactory::load($filePath);
+        $data = [];
+
+        foreach ($spreadsheet->getActiveSheet()->getRowIterator() as $row) {
+            $rowData = [];
+            foreach ($row->getCellIterator() as $cell) {
+                $rowData[] = $cell->getValue() ?? '';
+            }
+            $data[] = $rowData;
+        }
+
+        return $data;
+    }
+
     /**
-    * Valide l'extension du fichier uploadé (CSV, XLS, ou XLSX uniquement).
-    */
+     * Valide l'extension du fichier uploadé (CSV, XLS, ou XLSX uniquement).
+     */
     public function validateFileExtension(UploadedFile $file): bool
     {
         $fileExtension = strtolower($file->getClientOriginalExtension());
@@ -39,43 +67,24 @@ class FileService
     }
 
     /**
-    * Charge les données d'un fichier Excel ou CSV dans un tableau PHP.
-    */
-    public function loadSpreadsheetData($filePath): array
-    {
-        $spreadsheet = IOFactory::load($filePath);
-        $data = [];
-
-        foreach ($spreadsheet->getActiveSheet()->getRowIterator() as $row) {
-            $rowData = [];
-            foreach ($row->getCellIterator() as $cell) {
-                $rowData[] = $cell->getValue() ?? '';  // Remplacer les null par des chaînes vides
-            }
-            $data[] = $rowData;
-        }
-
-        return $data;
-    }
-
-    /**
-    * Stocke les données d'un fichier dans une session.
-    */
+     * Stocke les données d'un fichier dans une session.
+     */
     public function storeDataInSession(array $data, SessionInterface $session)
     {
         $session->set('spreadsheet_data', $data);
     }
 
     /**
-    * Récupère les données du fichier stockées dans la session.
-    */
+     * Récupère les données du fichier stockées dans la session.
+     */
     public function getDataFromSession(SessionInterface $session): array
     {
         return $session->get('spreadsheet_data', []);
     }
 
     /**
-    * Traite les données en ignorant un nombre de lignes définies au début.
-    */
+     * Traite les données en ignorant un nombre de lignes définies au début.
+     */
     public function ignoreFirstRows(array $data, string $ignoreOption): array
     {
         if ($ignoreOption === 'one' && count($data) > 0) {
@@ -89,8 +98,8 @@ class FileService
     }
 
     /**
-    * Génère une liste des lettres de colonnes (A-Z, AA-ZZ, etc.).
-    */
+     * Génère une liste des lettres de colonnes (A-Z, AA-ZZ, etc.).
+     */
     public function getColumnLetters(array $data): array
     {
         // Supposons que chaque ligne dans les données a le même nombre de colonnes
@@ -106,8 +115,8 @@ class FileService
     }
 
     /**
-    * Filtre les données selon les colonnes sélectionnées (par lettre de colonne).
-    */
+     * Filtre les données selon les colonnes sélectionnées (par lettre de colonne).
+     */
     public function filterDataBySelectedColumns(array $data, array $selectedColumns): array
     {
         $filteredData = [];
@@ -129,8 +138,8 @@ class FileService
     }
 
     /**
-    * Filtre les données selon les colonnes sélectionnées en utilisant leur clé.
-    */
+     * Filtre les données selon les colonnes sélectionnées en utilisant leur clé.
+     */
     public function filterDataByColumns(array $data, array $selectedColumns): array
     {
         return array_map(function ($row) use ($selectedColumns) {
@@ -141,8 +150,8 @@ class FileService
     }
 
     /**
-    * Génère un fichier CSV à partir des données filtrées.
-    */
+     * Génère un fichier CSV à partir des données filtrées.
+     */
     public function generateCsvFromFilteredData(array $filteredData, array $selectedColumns): string
     {
         $handle = fopen('php://temp', 'r+');
@@ -163,8 +172,8 @@ class FileService
     }
 
     /**
-    * Génère un fichier CSV à partir de données brutes.
-    */
+     * Génère un fichier CSV à partir de données brutes.
+     */
     public function generateCsvFromData(array $data): string
     {
         $csvContent = '';
@@ -182,8 +191,8 @@ class FileService
     }
 
     /**
-    * Prépare les données du CSV selon les colonnes sélectionnées et les filtre.
-    */
+     * Prépare les données du CSV selon les colonnes sélectionnées et les filtre.
+     */
     public function prepareCsvData(array $selectedColumns, array $filteredData): array
     {
         $csvData = [];
@@ -270,7 +279,7 @@ class FileService
     {
         // Convertir la lettre en majuscule et récupérer son code ASCII
         $column = strtoupper($column);
-        $index = ord($column) - ord('A') + 0; // A devient 0, B devient 1, etc.
+        $index = ord($column) - ord('A'); // A devient 0, B devient 1, etc.
 
         return $index;
     }
@@ -286,8 +295,8 @@ class FileService
     }
 
     /**
-    * Passe les lettres minuscules en majuscules
-    */
+     * Passe les lettres minuscules en majuscules
+     */
     public function transformTextToUppercase(&$data)
     {
         $changed = false;
@@ -305,8 +314,8 @@ class FileService
     }
 
     /**
-    * Supprime les accents et les apostrophes
-    */
+     * Supprime les accents et les apostrophes
+     */
     public function removeAccentsAndApostrophes(&$data)
     {
         $changed = false;
@@ -329,8 +338,8 @@ class FileService
     }
 
     /**
-    * Compare les pays (pour vérifier uniquement si le pays est français) avant de vérifier si les codes postaux sont valides (5 chiffres)
-    */
+     * Compare les pays (pour vérifier uniquement si le pays est français) avant de vérifier si les codes postaux sont valides (5 chiffres)
+     */
     public function validatePostalCodes(array &$data, int $postalCodeIndex, int $countryIndex): bool
     {
         $changed = false;
@@ -357,8 +366,8 @@ class FileService
     }
 
     /**
-    * Vérifie la longueur des cellules et retourne le nombre de lignes avec des cellules > 38 caractères.
-    */
+     * Vérifie la longueur des cellules et retourne le nombre de lignes avec des cellules > 38 caractères.
+     */
     public function checkCellLength(array &$data): int
     {
         $errorCount = 0;
@@ -376,8 +385,8 @@ class FileService
     }
 
     /**
-    * Retourne les indices des cellules avec des erreurs (cellules > 38 caractères).
-    */
+     * Retourne les indices des cellules avec des erreurs (cellules > 38 caractères).
+     */
     public function getErrorCells(array &$data): array
     {
         $errorCells = [];
@@ -394,8 +403,8 @@ class FileService
     }
 
     /**
-    * Génère un fichier Excel avec les cellules en erreur colorées en rouge.
-    */
+     * Génère un fichier Excel avec les cellules en erreur colorées en rouge.
+     */
     public function generateErrorExcel(array $data, array $errorCells): string
     {
         $spreadsheet = new Spreadsheet();
@@ -417,7 +426,7 @@ class FileService
             foreach ($row as $cell) {
                 $cellCoordinate = $this->transformIndexToLetter($colIndex) . $rowIndex;
                 $sheet->setCellValue($cellCoordinate, $cell);
-        
+
                 // Vérifier si cette cellule est une cellule en erreur
                 foreach ($errorCells as $errorCell) {
                     if ($errorCell[0] == $originalRowIndex && $errorCell[1] == $colIndex) {
@@ -431,7 +440,7 @@ class FileService
                 $colIndex++;
             }
             $rowIndex++;
-        }    
+        }
 
         $writer = new Xlsx($spreadsheet);
         $tempFile = tempnam(sys_get_temp_dir(), 'error_excel_') . '.xlsx';
@@ -507,5 +516,4 @@ class FileService
         $this->removeAccentsAndApostrophes($data);
         $this->transformTextToUppercase($data);
     }
-
 }

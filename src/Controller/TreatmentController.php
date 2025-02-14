@@ -12,14 +12,13 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TreatmentController extends AbstractController
 {
     public function __construct()
     {
         // Augmenter la limite de mémoire ici
-        ini_set('memory_limit', '600M');
+        ini_set('memory_limit', '1000M');
     }
 
     #[Route('/treatment', name: 'app_treatment', methods: ['GET', 'POST'])]
@@ -247,39 +246,50 @@ class TreatmentController extends AbstractController
         // Récupérer les données filtrées de la session
         $filteredData = $fileService->getDataFromSession($session);
 
-        // Vérifier si des données sont présentes
+        // Vérification des données en session
         if (empty($filteredData)) {
-            $this->addFlash('error', 'Aucune donnée disponible pour générer le fichier.');
+            $this->addFlash('error', 'Aucune donnée trouvée dans la session.');
             return $this->redirectToRoute('app_display');
         }
 
-        // Récupérer les colonnes sélectionnées et leurs titres
-        $selectedColumnsIndexes = $session->get('selected_columns', []);
-        $selectedColumnTitles = [
-            'raison_social' => 'Raison Sociale',
-            'civilite_nom_prenom' => 'Civilité, Nom, Prénom',
-            'adresse_1' => 'Adresse 1',
-            'adresse_2' => 'Adresse 2',
-            'adresse_3' => 'Adresse 3',
-            'code_postal' => 'Code Postal',
-            'ville' => 'Ville',
-            'pays' => 'Pays'
-        ];
+        // Appliquer les transformations
+        $fileService->applyTransformations($filteredData);
 
-        // Filtrer les données en utilisant les indices de colonne
-        $dataToDisplay = array_map(function ($row) use ($selectedColumnsIndexes) {
-            return array_intersect_key($row, array_flip($selectedColumnsIndexes));
+        // Vérification des transformations
+        if (empty($filteredData)) {
+            $this->addFlash('error', 'Aucune donnée après transformation.');
+            return $this->redirectToRoute('app_display');
+        }
+
+        // Identifier les colonnes contenant des erreurs
+        $errorCells = $fileService->getErrorCells($filteredData);
+        $errorColumns = array_unique(array_map(function ($cell) {
+            return $cell[1]; // Retourne l'index de la colonne
+        }, $errorCells));
+
+        // Identifier les colonnes sans erreurs
+        $allColumns = range(0, count($filteredData[0]) - 1); // Toutes les colonnes possibles
+        $validColumns = array_diff($allColumns, $errorColumns); // Colonnes sans erreurs
+
+        // Filtrer les données en utilisant les colonnes sans erreurs
+        $dataToDisplay = array_map(function ($row) use ($validColumns) {
+            return array_intersect_key($row, array_flip($validColumns));
         }, $filteredData);
+
+        // Vérification des données filtrées
+        if (empty($dataToDisplay)) {
+            $this->addFlash('error', 'Aucune donnée à afficher après filtrage.');
+            return $this->redirectToRoute('app_display');
+        }
 
         // Générer un fichier Excel avec les données filtrées
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         // Ajouter les en-têtes
-        $headerRow = [];
-        foreach ($selectedColumnsIndexes as $index) {
-            $headerRow[] = $selectedColumnTitles[$index] ?? '';
-        }
+        $headerRow = array_map(function ($index) use ($filteredData) {
+            return $filteredData[0][$index] ?? ''; // Utiliser les en-têtes de la première ligne
+        }, $validColumns);
         $sheet->fromArray([$headerRow], NULL, 'A1');
 
         // Ajouter les données
@@ -288,6 +298,12 @@ class TreatmentController extends AbstractController
         $writer = new Xlsx($spreadsheet);
         $tempFile = tempnam(sys_get_temp_dir(), 'valid_excel_') . '.xlsx';
         $writer->save($tempFile);
+
+        // Vérification de la génération du fichier Excel
+        if (!file_exists($tempFile)) {
+            $this->addFlash('error', 'Erreur lors de la génération du fichier Excel.');
+            return $this->redirectToRoute('app_display');
+        }
 
         // Retourner le fichier Excel en réponse
         return new BinaryFileResponse($tempFile, 200, [

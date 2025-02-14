@@ -1,6 +1,5 @@
 <?php
 
-// src/Controller/DisplayController.php
 namespace App\Controller;
 
 use Symfony\Component\HttpFoundation\Request;
@@ -65,6 +64,8 @@ class DisplayController extends AbstractController
             $this->addFlash('error', "Le fichier est trop volumineux. Veuillez réduire sa taille de " . round($sizeToReduceInMo, 2) . " Mo.");
             return $this->redirectToRoute('app_display');
         }
+
+        $this->addFlash('debug', 'Colonnes sélectionnées : ' . implode(', ', $selectedColumns));
 
         return $this->render('display/index.html.twig', [
             'data' => $filteredData,  // Afficher les données filtrées
