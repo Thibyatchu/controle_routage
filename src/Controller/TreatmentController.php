@@ -28,40 +28,67 @@ class TreatmentController extends AbstractController
         $changedUppercase = false;
         $changedAccentsApostrophes = false;
         $changedPostalCodes = false;
-
+    
         // Récupérer l'option d'ignorance des lignes depuis la session
         $ignoreFirstRows = $session->get('ignore_first_rows', 'none');
-
+    
         // Récupérer les données filtrées de la session
         $filteredData = $fileService->getDataFromSession($session);
-
+    
         // Si aucune donnée n'est trouvée, afficher un message d'erreur et rediriger
         if (empty($filteredData)) {
             $this->addFlash('error', 'Aucune donnée filtrée trouvée dans la session.');
             return $this->redirectToRoute('app_display');
         }
-
+    
+        // Réimportation du fichier corrigé
+        if ($request->isMethod('POST') && $request->files->has('file')) {
+            $correctedFile = $request->files->get('file');
+    
+            if (!$fileService->validateFileExtension($correctedFile)) {
+                $this->addFlash('error', 'Le fichier importé n\'est pas valide. Veuillez importer un fichier CSV, XLS ou XLSX.');
+                return $this->redirectToRoute('app_treatment');
+            }
+    
+            $correctedFilePath = $correctedFile->getPathname();
+            $correctedData = $fileService->loadSpreadsheetData($correctedFilePath);
+    
+            // Récupérer le fichier principal sans les lignes d'erreur depuis la session
+            $mainDataWithoutErrors = $session->get('main_data_without_errors', []);
+    
+            // Fusionner toutes les lignes corrigées avec les données valides
+            $mergedData = $fileService->mergeCorrectedData($mainDataWithoutErrors, $correctedData);
+    
+            // Stocker les données fusionnées dans la session
+            $fileService->storeDataInSession($mergedData, $session);
+    
+            $this->addFlash('success', 'Le fichier corrigé a été importé avec succès.');
+    
+            // Rediriger pour éviter de re-traiter le fichier corrigé
+            return $this->redirectToRoute('app_treatment');
+        }
+    
         // Appliquer les transformations
         $fileService->applyTransformations($filteredData);
-
+    
         // Variables pour savoir si un changement a été effectué
         $changedUppercase = $fileService->transformTextToUppercase($filteredData);
         $changedAccentsApostrophes = $fileService->removeAccentsAndApostrophes($filteredData);
-
+    
         // Appliquer l'ignorance des lignes
         $filteredData = $fileService->ignoreFirstRows($filteredData, $ignoreFirstRows);
-
+    
         // Récupérer les colonnes sélectionnées
         $codePostal = $request->get('code_postal', '');
         $pays = $request->get('pays', '');
-
+    
         // Vérifier et modifier les codes postaux si un pays et un code postal sont sélectionnés
         if (!empty($codePostal) && !empty($pays)) {
             $postalCodeIndex = $fileService->columnToIndex($codePostal);
             $countryIndex = $fileService->columnToIndex($pays);
             $changedPostalCodes = $fileService->validatePostalCodes($filteredData, $postalCodeIndex, $countryIndex);
         }
-
+    
         // Récupérer les colonnes sélectionnées par l'utilisateur dans les listes déroulantes
         $raisonSocial = $request->get('raison_social', '');
         $civiliteNomPrenom = $request->get('civilite_nom_prenom', []);
@@ -71,7 +98,7 @@ class TreatmentController extends AbstractController
         $codePostal = $request->get('code_postal', '');
         $ville = $request->get('ville', '');
         $pays = $request->get('pays', '');
-
+    
         // Map des titres des colonnes et de leurs noms dans le formulaire
         $filterTitles = [
             'raison_social' => 'Raison Sociale',
@@ -83,121 +110,82 @@ class TreatmentController extends AbstractController
             'ville' => 'Ville',
             'pays' => 'Pays'
         ];
-
+    
         // Construire les indices de colonnes sélectionnées
         $selectedColumnsIndexes = [];
         $selectedColumnTitles = [];
-
+    
         // Pour chaque filtre sélectionné
         if (!empty($raisonSocial)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($raisonSocial);
             $selectedColumnTitles[] = $filterTitles['raison_social'];
         }
-
+    
         if (!empty($civiliteNomPrenom)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($civiliteNomPrenom[0]);
             $selectedColumnTitles[] = $filterTitles['civilite_nom_prenom'];
-
+    
             foreach (array_slice($civiliteNomPrenom, 1) as $column) {
                 $selectedColumnsIndexes[] = $fileService->columnToIndex($column);
                 $selectedColumnTitles[] = '';
             }
         }
-
+    
         if (!empty($adresse1)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($adresse1);
             $selectedColumnTitles[] = $filterTitles['adresse_1'];
         }
-
+    
         if (!empty($adresse2)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($adresse2);
             $selectedColumnTitles[] = $filterTitles['adresse_2'];
         }
-
+    
         if (!empty($adresse3)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($adresse3);
             $selectedColumnTitles[] = $filterTitles['adresse_3'];
         }
-
+    
         if (!empty($codePostal)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($codePostal);
             $selectedColumnTitles[] = $filterTitles['code_postal'];
         }
-
+    
         if (!empty($ville)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($ville);
             $selectedColumnTitles[] = $filterTitles['ville'];
         }
-
+    
         if (!empty($pays)) {
             $selectedColumnsIndexes[] = $fileService->columnToIndex($pays);
             $selectedColumnTitles[] = $filterTitles['pays'];
         }
-
+    
         // Valider les colonnes sélectionnées
         if (!$fileService->validateSelectedColumns($filteredData, $selectedColumnsIndexes)) {
             $this->addFlash('error', 'Une ou plusieurs colonnes sélectionnées n\'existent pas dans les données.');
             return $this->redirectToRoute('app_display');
         }
-
+    
         // Filtrer les données en utilisant ces indices de colonne
         $dataToDisplay = array_map(function ($row) use ($selectedColumnsIndexes) {
             return array_intersect_key($row, array_flip($selectedColumnsIndexes));
         }, $filteredData);
-
+    
         // Limiter l'affichage à 10 lignes
         $dataToDisplay = array_slice($dataToDisplay, 0, 10);
-
+    
         // Vérifier la longueur des cellules
         $cellLengthErrorCount = $fileService->checkCellLength($filteredData);
         $errorCells = $fileService->getErrorCells($filteredData);
-
+    
         // Récupérer les indices des lignes d'erreur
         $errorRowIndices = $fileService->getErrorRowIndices($filteredData);
-
+    
         // Stocker le fichier principal sans les lignes d'erreur dans la session
         $mainDataWithoutErrors = $fileService->filterDataBySelectedRows($filteredData, $errorRowIndices);
         $session->set('main_data_without_errors', $mainDataWithoutErrors);
-
-        // Réimportation du fichier corrigé
-        if ($request->isMethod('POST') && $request->files->has('file')) {
-            $correctedFile = $request->files->get('file');
-
-            if (!$fileService->validateFileExtension($correctedFile)) {
-                $this->addFlash('error', 'Le fichier importé n\'est pas valide. Veuillez importer un fichier CSV, XLS ou XLSX.');
-                return $this->redirectToRoute('app_treatment');
-            }
-
-            $correctedFilePath = $correctedFile->getPathname();
-            $correctedData = $fileService->loadSpreadsheetData($correctedFilePath);
-
-            // Récupérer le fichier principal sans les lignes d'erreur depuis la session
-            $mainDataWithoutErrors = $session->get('main_data_without_errors', []);
-
-            // Fusionner les données
-            $mergedData = $this->mergeCorrectedData($mainDataWithoutErrors, $correctedData, $errorRowIndices);
-
-            // Stocker les données fusionnées dans la session
-            $fileService->storeDataInSession($mergedData, $session);
-
-            // Récupérer les données fusionnées de la session
-            $filteredData = $fileService->getDataFromSession($session);
-
-            // Vérifier la longueur des cellules
-            $cellLengthErrorCount = $fileService->checkCellLength($filteredData);
-            $errorCells = $fileService->getErrorCells($filteredData);
-
-            // Filtrer les données en utilisant les indices de colonne
-            $dataToDisplay = array_map(function ($row) use ($selectedColumnsIndexes) {
-                return array_intersect_key($row, array_flip($selectedColumnsIndexes));
-            }, $filteredData);
-
-            // Limiter l'affichage à 10 lignes
-            $dataToDisplay = array_slice($dataToDisplay, 0, 10);
-
-            $this->addFlash('success', 'Le fichier corrigé a été importé avec succès.');
-        }
-
+    
         // Passer le chemin du fichier temporaire à la vue
         return $this->render('treatment/index.html.twig', [
             'filtered_data' => $dataToDisplay,
@@ -210,18 +198,7 @@ class TreatmentController extends AbstractController
             'cellLengthErrorCount' => $cellLengthErrorCount,
             'errorCells' => $errorCells,
         ]);
-    }
-
-    // Méthode pour fusionner les données corrigées avec les données temporaires
-    private function mergeCorrectedData(array $mainData, array $correctedData, array $errorRowIndices): array
-    {
-        foreach ($correctedData as $index => $correctedRow) {
-            if (isset($errorRowIndices[$index])) {
-                $mainData[$errorRowIndices[$index]] = $correctedRow;
-            }
-        }
-        return $mainData;
-    }
+    }         
 
     #[Route('/download-error-excel', name: 'app_download_error_excel')]
     public function downloadErrorExcel(Request $request, SessionInterface $session, FileService $fileService): Response
@@ -261,39 +238,18 @@ class TreatmentController extends AbstractController
             return $this->redirectToRoute('app_display');
         }
 
-        // Identifier les colonnes contenant des erreurs
-        $errorCells = $fileService->getErrorCells($filteredData);
-        $errorColumns = array_unique(array_map(function ($cell) {
-            return $cell[1]; // Retourne l'index de la colonne
-        }, $errorCells));
-
-        // Identifier les colonnes sans erreurs
-        $allColumns = range(0, count($filteredData[0]) - 1); // Toutes les colonnes possibles
-        $validColumns = array_diff($allColumns, $errorColumns); // Colonnes sans erreurs
-
-        // Filtrer les données en utilisant les colonnes sans erreurs
-        $dataToDisplay = array_map(function ($row) use ($validColumns) {
-            return array_intersect_key($row, array_flip($validColumns));
-        }, $filteredData);
-
-        // Vérification des données filtrées
-        if (empty($dataToDisplay)) {
-            $this->addFlash('error', 'Aucune donnée à afficher après filtrage.');
-            return $this->redirectToRoute('app_display');
-        }
-
-        // Générer un fichier Excel avec les données filtrées
+        // Générer un fichier Excel avec toutes les données
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         // Ajouter les en-têtes
-        $headerRow = array_map(function ($index) use ($filteredData) {
-            return $filteredData[0][$index] ?? ''; // Utiliser les en-têtes de la première ligne
-        }, $validColumns);
+        $headerRow = $filteredData[0]; // Utiliser la première ligne comme en-têtes
         $sheet->fromArray([$headerRow], NULL, 'A1');
 
         // Ajouter les données
-        $sheet->fromArray($dataToDisplay, NULL, 'A2');
+        if (count($filteredData) > 1) {
+            $sheet->fromArray(array_slice($filteredData, 1), NULL, 'A2'); // Ajouter les données à partir de la deuxième ligne
+        }
 
         $writer = new Xlsx($spreadsheet);
         $tempFile = tempnam(sys_get_temp_dir(), 'valid_excel_') . '.xlsx';

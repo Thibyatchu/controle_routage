@@ -516,4 +516,13 @@ class FileService
         $this->removeAccentsAndApostrophes($data);
         $this->transformTextToUppercase($data);
     }
+
+    /**
+     * Fusionne les données corrigées avec les données principales.
+     */
+    public function mergeCorrectedData(array $mainData, array $correctedData): array
+    {
+        // Ajouter toutes les lignes corrigées à la suite des lignes valides
+        return array_merge($mainData, $correctedData);
+    }    
 }
