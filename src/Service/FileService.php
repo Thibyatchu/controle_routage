@@ -17,35 +17,30 @@ class FileService
 
     public function loadSpreadsheetData($filePath)
     {
-        if (isset($this->cache[$filePath])) {
-            return $this->cache[$filePath];
-        }
-
-        $data = $this->loadDataFromFile($filePath);
-        $this->cache[$filePath] = $data;
-
-        return $data;
-    }
-
-    private function loadDataFromFile($filePath)
-    {
-        $spreadsheet = IOFactory::load($filePath);
-        $data = [];
-
-        foreach ($spreadsheet->getActiveSheet()->getRowIterator() as $row) {
-            $rowData = [];
-            foreach ($row->getCellIterator() as $cell) {
-                $rowData[] = $cell->getValue() ?? '';
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);  // Charge le fichier
+        $sheet = $spreadsheet->getActiveSheet(); // Récupère la feuille active
+        $rows = [];  // Tableau pour stocker les lignes
+        // Parcours des lignes du fichier
+        foreach ($sheet->getRowIterator() as $row) {
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false); // Permet d'itérer sur toutes les cellules, même vides
+    
+            $rowData = array(); // Tableau pour stocker les données de chaque ligne
+    
+            // Parcours des cellules de la ligne
+            foreach ($cellIterator as $cell) {
+                $rowData[] = $cell->getFormattedValue();  // Ajoute la valeur de la cellule au tableau de la ligne
             }
-            $data[] = $rowData;
+            $rowTMP = array();
+            $rowTMP['RowData'] = $rowData;
+            $rowTMP['State'] = 'OK';
+            // Ajoute cette ligne à la collection de lignes avec une clé 'RowData' et une clé 'State'
+            $rows[] = $rowTMP ;
+        
         }
-
-        return $data;
+        return $rows;  // Retourne les lignes formatées
     }
 
-    /**
-     * Valide l'extension du fichier uploadé (CSV, XLS, ou XLSX uniquement).
-     */
     public function validateFileExtension(UploadedFile $file): bool
     {
         $fileExtension = strtolower($file->getClientOriginalExtension());
@@ -55,7 +50,6 @@ class FileService
             return false;
         }
 
-        // Vérification supplémentaire du type MIME
         $mimeType = $file->getMimeType();
         $validMimeTypes = [
             'text/csv',
@@ -66,57 +60,44 @@ class FileService
         return in_array($mimeType, $validMimeTypes);
     }
 
-    /**
-     * Stocke les données d'un fichier dans une session.
-     */
-    public function storeDataInSession(array $data, SessionInterface $session)
+    public function storeDataInSession(array $data, SessionInterface $session): void
     {
-        $session->set('spreadsheet_data', $data);
+        // Pas besoin de reformatter les données, nous utilisons le format déjà correct
+        $session->set('filtered_data', $data);
     }
 
-    /**
-     * Récupère les données du fichier stockées dans la session.
-     */
-    public function getDataFromSession(SessionInterface $session): array
+    // Retrieving data from session
+    public function getDataFromSession(SessionInterface $session)
     {
-        return $session->get('spreadsheet_data', []);
+        $data = $session->get('filtered_data', []);
+
+        // Aucune manipulation nécessaire ici, retourne simplement les données
+        return $data;
     }
 
-    /**
-     * Traite les données en ignorant un nombre de lignes définies au début.
-     */
     public function ignoreFirstRows(array $data, string $ignoreOption): array
     {
         if ($ignoreOption === 'one' && count($data) > 0) {
-            array_shift($data); // Supprime la première ligne
+            array_shift($data);
         } elseif ($ignoreOption === 'two' && count($data) > 1) {
-            array_shift($data); // Supprime la première ligne
-            array_shift($data); // Supprime la deuxième ligne
+            array_shift($data);
+            array_shift($data);
         }
 
         return $data;
     }
 
-    /**
-     * Génère une liste des lettres de colonnes (A-Z, AA-ZZ, etc.).
-     */
     public function getColumnLetters(array $data): array
     {
-        // Supposons que chaque ligne dans les données a le même nombre de colonnes
-        // Récupérer les clés des colonnes (indices numériques) et les convertir en lettres
-        $numColumns = count($data[0]);
-
+        $numColumns = count($data[0]['RowData']);
         $letters = [];
         for ($i = 0; $i < $numColumns; $i++) {
-            $letters[] = chr(65 + $i); // Convertit l'indice en lettre (A, B, C, ...)
+            $letters[] = chr(65 + $i);
         }
 
         return $letters;
     }
 
-    /**
-     * Filtre les données selon les colonnes sélectionnées (par lettre de colonne).
-     */
     public function filterDataBySelectedColumns(array $data, array $selectedColumns): array
     {
         $filteredData = [];
@@ -124,44 +105,34 @@ class FileService
             foreach ($data as $row) {
                 $filteredRow = [];
                 foreach ($selectedColumns as $col) {
-                    $colIndex = ord($col) - 65; // Calculer l'index de la colonne (A=0, B=1,...)
-                    $filteredRow[] = $row[$colIndex] ?? ''; // Ajouter la donnée de la colonne
+                    $colIndex = ord($col) - 65;
+                    $filteredRow[] = $row['RowData'][$colIndex] ?? '';
                 }
                 $filteredData[] = $filteredRow;
             }
         } else {
-            // Si aucune colonne n'est sélectionnée, afficher les données d'origine
             $filteredData = $data;
         }
 
         return $filteredData;
     }
 
-    /**
-     * Filtre les données selon les colonnes sélectionnées en utilisant leur clé.
-     */
     public function filterDataByColumns(array $data, array $selectedColumns): array
     {
         return array_map(function ($row) use ($selectedColumns) {
-            return array_filter($row, function ($key) use ($selectedColumns) {
+            return array_filter($row['RowData'], function ($key) use ($selectedColumns) {
                 return in_array($key, $selectedColumns);
             }, ARRAY_FILTER_USE_KEY);
         }, $data);
     }
 
-    /**
-     * Génère un fichier CSV à partir des données filtrées.
-     */
     public function generateCsvFromFilteredData(array $filteredData, array $selectedColumns): string
     {
         $handle = fopen('php://temp', 'r+');
-
-        // Ajouter les en-têtes
         fputcsv($handle, $selectedColumns);
 
-        // Ajouter les données filtrées
         foreach ($filteredData as $row) {
-            fputcsv($handle, $row);
+            fputcsv($handle, $row['RowData']);
         }
 
         rewind($handle);
@@ -171,28 +142,19 @@ class FileService
         return $csvContent;
     }
 
-    /**
-     * Génère un fichier CSV à partir de données brutes.
-     */
     public function generateCsvFromData(array $data): string
     {
         $csvContent = '';
-
-        // En-têtes du CSV
-        $headers = array_keys($data[0]); // Les clés du premier élément sont les en-têtes
+        $headers = array_keys($data[0]['RowData']);
         $csvContent .= implode(';', $headers) . "\n";
 
-        // Données
         foreach ($data as $row) {
-            $csvContent .= implode(';', $row) . "\n";
+            $csvContent .= implode(';', $row['RowData']) . "\n";
         }
 
         return $csvContent;
     }
 
-    /**
-     * Prépare les données du CSV selon les colonnes sélectionnées et les filtre.
-     */
     public function prepareCsvData(array $selectedColumns, array $filteredData): array
     {
         $csvData = [];
@@ -216,7 +178,7 @@ class FileService
                 $csvData[0][$colTitle] = '';
             }
         }
-
+    
         // Ajouter les données dans les bonnes colonnes (par lettre de colonne)
         foreach ($filteredData as $rowIndex => $row) {
             foreach ($selectedColumns as $colTitle => $colLetters) {
@@ -231,23 +193,23 @@ class FileService
         }
         return $csvData;
     }
+    
 
     public function getColumnData(array $data, array $selectedColumns): array
     {
         $result = [];
         foreach ($selectedColumns as $column) {
             if (empty($column)) {
-                $result[] = []; // Si aucune colonne sélectionnée, ajouter une colonne vide
+                $result[] = [];
             } else {
-                // Convertir la lettre de la colonne en un index
                 $colIndex = ord(strtoupper($column)) - 65;
                 $columnData = [];
 
                 foreach ($data as $row) {
-                    $columnData[] = $row[$colIndex] ?? ''; // Si la colonne n'existe pas, laisser vide
+                    $columnData[] = $row['RowData'][$colIndex] ?? '';
                 }
 
-                $result[] = $columnData; // Ajouter la colonne aux résultats
+                $result[] = $columnData;
             }
         }
         return $result;
@@ -257,55 +219,42 @@ class FileService
     {
         foreach ($filteredData as &$row) {
             foreach ($columnsToSplit as $columnName => $splitIndexes) {
-                // Si la colonne existe dans la ligne, on la sépare
-                if (isset($row[$columnName])) {
-                    $splitData = explode(' ', $row[$columnName]); // On suppose ici que les parties sont séparées par un espace
+                if (isset($row['RowData'][$columnName])) {
+                    $splitData = explode(' ', $row['RowData'][$columnName]);
                     foreach ($splitIndexes as $index => $splitColumn) {
-                        $row[$splitColumn] = isset($splitData[$index]) ? $splitData[$index] : ''; // Ajouter les parties séparées aux bonnes colonnes
+                        $row['RowData'][$splitColumn] = isset($splitData[$index]) ? $splitData[$index] : '';
                     }
-                    unset($row[$columnName]); // Enlever la colonne d'origine (si elle est séparée)
+                    unset($row['RowData'][$columnName]);
                 }
             }
         }
         return $filteredData;
     }
 
-    /**
-     * Convertit une lettre de colonne (A, B, C...) en un indice numérique (0, 1, 2, ...).
-     * @param string $column Lettre de la colonne (A, B, C...).
-     * @return int L'indice correspondant à la colonne (0, 1, 2...).
-     */
     public function columnToIndex(string $column): int
     {
-        // Convertir la lettre en majuscule et récupérer son code ASCII
         $column = strtoupper($column);
-        $index = ord($column) - ord('A'); // A devient 0, B devient 1, etc.
+        $index = ord($column) - ord('A');
 
         return $index;
     }
 
-    /**
-     * Convertit un indice numérique (0, 1, 2...) en une lettre de colonne (A, B, C...).
-     * @param int $index Indice numérique de la colonne (0, 1, 2...).
-     * @return string Lettre de la colonne (A, B, C...).
-     */
     public function transformIndexToLetter(int $index): string
     {
-        return chr(65 + $index); // 0 => A, 1 => B, 2 => C, ...
+        return chr(65 + $index);
     }
 
-    /**
-     * Passe les lettres minuscules en majuscules
-     */
     public function transformTextToUppercase(&$data)
     {
         $changed = false;
 
         foreach ($data as &$row) {
-            foreach ($row as &$cell) {
-                if (is_string($cell)) {
-                    $changed = true;
-                    $cell = strtoupper($cell);
+            if (isset($row['RowData'])) {
+                foreach ($row['RowData'] as &$cell) {
+                    if (is_string($cell)) {
+                        $changed = true;
+                        $cell = strtoupper($cell);
+                    }
                 }
             }
         }
@@ -313,19 +262,18 @@ class FileService
         return $changed;
     }
 
-    /**
-     * Supprime les accents et les apostrophes
-     */
     public function removeAccentsAndApostrophes(&$data)
     {
         $changed = false;
         foreach ($data as $rowIndex => $row) {
-            foreach ($row as $cellIndex => $cell) {
-                $newCell = $this->removeAccents($cell);
-                $newCell = str_replace("'", " ", $newCell);
-                if ($newCell !== $cell) {
-                    $data[$rowIndex][$cellIndex] = $newCell;
-                    $changed = true;
+            if (isset($row['RowData'])) {
+                foreach ($row['RowData'] as $cellIndex => $cell) {
+                    $newCell = $this->removeAccents($cell);
+                    $newCell = str_replace("'", " ", $newCell);
+                    if ($newCell !== $cell) {
+                        $data[$rowIndex]['RowData'][$cellIndex] = $newCell;
+                        $changed = true;
+                    }
                 }
             }
         }
@@ -337,27 +285,20 @@ class FileService
         return strtr(utf8_decode($string), utf8_decode('àáâäãåçèéêëìíîïòóôöõùúûüýÿÀÁÂÄÃÅÇÈÉÊËÌÍÎÏÒÓÔÖÕÙÚÛÜÝ'), 'AAAAAACEEEEIIIIOOOOOUUUUYYAAAAAACEEEEIIIIDNOOOOOUUUUY');
     }
 
-    /**
-     * Compare les pays (pour vérifier uniquement si le pays est français) avant de vérifier si les codes postaux sont valides (5 chiffres)
-     */
     public function validatePostalCodes(array &$data, int $postalCodeIndex, int $countryIndex): bool
     {
         $changed = false;
 
         foreach ($data as &$row) {
-            if (!isset($row[$postalCodeIndex]) || !isset($row[$countryIndex])) {
-                continue; // Évite les erreurs si les indices n'existent pas
-            }
+            if (isset($row['RowData'][$postalCodeIndex]) && isset($row['RowData'][$countryIndex])) {
+                $codePostal = trim($row['RowData'][$postalCodeIndex]);
+                $pays = strtoupper(trim($row['RowData'][$countryIndex]));
 
-            $codePostal = trim($row[$postalCodeIndex]);
-            $pays = strtoupper(trim($row[$countryIndex])); // Convertir en majuscules pour éviter les erreurs
-
-            // Vérifie si le pays est la France
-            if (in_array($pays, ['FR', 'FRA', 'FRANCE'])) {
-                // Vérifie si le code postal contient moins de 5 chiffres
-                if (ctype_digit($codePostal) && strlen($codePostal) < 5) {
-                    $row[$postalCodeIndex] = str_pad($codePostal, 5, '0', STR_PAD_LEFT); // Ajoute des zéros à gauche
-                    $changed = true;
+                if (in_array($pays, ['FR', 'FRA', 'FRANCE'])) {
+                    if (ctype_digit($codePostal) && strlen($codePostal) < 5) {
+                        $row['RowData'][$postalCodeIndex] = str_pad($codePostal, 5, '0', STR_PAD_LEFT);
+                        $changed = true;
+                    }
                 }
             }
         }
@@ -365,36 +306,16 @@ class FileService
         return $changed;
     }
 
-    /**
-     * Vérifie la longueur des cellules et retourne le nombre de lignes avec des cellules > 38 caractères.
-     */
-    public function checkCellLength(array &$data): int
-    {
-        $errorCount = 0;
-
-        foreach ($data as $row) {
-            foreach ($row as $cell) {
-                if (is_string($cell) && strlen($cell) > 38) {
-                    $errorCount++;
-                    break; // Passer à la ligne suivante dès qu'une cellule > 38 caractères est trouvée
-                }
-            }
-        }
-
-        return $errorCount;
-    }
-
-    /**
-     * Retourne les indices des cellules avec des erreurs (cellules > 38 caractères).
-     */
     public function getErrorCells(array &$data): array
     {
         $errorCells = [];
 
         foreach ($data as $rowIndex => $row) {
-            foreach ($row as $cellIndex => $cell) {
-                if (is_string($cell) && strlen($cell) > 38) {
-                    $errorCells[] = [$rowIndex, $cellIndex];
+            if (isset($row['RowData'])) {
+                foreach ($row['RowData'] as $cellIndex => $cell) {
+                    if (is_string($cell) && strlen($cell) > 38) {
+                        $errorCells[] = [$rowIndex, $cellIndex];
+                    }
                 }
             }
         }
@@ -402,15 +323,11 @@ class FileService
         return $errorCells;
     }
 
-    /**
-     * Génère un fichier Excel avec les cellules en erreur colorées en rouge.
-     */
     public function generateErrorExcel(array $data, array $errorCells): string
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Filtrer les lignes avec des erreurs
         $errorRows = [];
         foreach ($errorCells as $errorCell) {
             $rowIndex = $errorCell[0];
@@ -419,15 +336,13 @@ class FileService
             }
         }
 
-        // Ajouter les données au fichier Excel
-        $rowIndex = 1; // Première ligne Excel
-        foreach ($errorRows as $originalRowIndex => $row) { // Garde la correspondance avec les indices originaux
+        $rowIndex = 1;
+        foreach ($errorRows as $originalRowIndex => $row) {
             $colIndex = 0;
-            foreach ($row as $cell) {
+            foreach ($row['RowData'] as $cell) {
                 $cellCoordinate = $this->transformIndexToLetter($colIndex) . $rowIndex;
                 $sheet->setCellValue($cellCoordinate, $cell);
 
-                // Vérifier si cette cellule est une cellule en erreur
                 foreach ($errorCells as $errorCell) {
                     if ($errorCell[0] == $originalRowIndex && $errorCell[1] == $colIndex) {
                         $sheet->getStyle($cellCoordinate)
@@ -449,13 +364,6 @@ class FileService
         return $tempFile;
     }
 
-    /**
-     * Filtre les données en fonction des lignes sélectionnées.
-     *
-     * @param array $data Les données à filtrer.
-     * @param array $selectedRows Les indices des lignes sélectionnées.
-     * @return array Les données filtrées.
-     */
     public function filterDataBySelectedRows(array $data, array $selectedRows): array
     {
         $filteredData = [];
@@ -467,20 +375,16 @@ class FileService
         return $filteredData;
     }
 
-    /**
-     * Récupère les indices des lignes contenant des erreurs.
-     *
-     * @param array $data Les données à vérifier.
-     * @return array Les indices des lignes contenant des erreurs.
-     */
     public function getErrorRowIndices(array $data): array
     {
         $errorRowIndices = [];
         foreach ($data as $rowIndex => $row) {
-            foreach ($row as $cell) {
-                if (is_string($cell) && strlen($cell) > 38) {
-                    $errorRowIndices[] = $rowIndex;
-                    break; // Passer à la ligne suivante dès qu'une cellule > 38 caractères est trouvée
+            if (isset($row['RowData'])) {
+                foreach ($row['RowData'] as $cell) {
+                    if (is_string($cell) && strlen($cell) > 38) {
+                        $errorRowIndices[] = $rowIndex;
+                        break;
+                    }
                 }
             }
         }
@@ -489,7 +393,7 @@ class FileService
 
     public function validateSelectedColumns(array $data, array $selectedColumns): bool
     {
-        $availableColumns = array_keys($data[0]);
+        $availableColumns = array_keys($data[0]['RowData']);
         foreach ($selectedColumns as $column) {
             if (!in_array($column, $availableColumns)) {
                 return false;
@@ -517,12 +421,38 @@ class FileService
         $this->transformTextToUppercase($data);
     }
 
-    /**
-     * Fusionne les données corrigées avec les données principales.
-     */
     public function mergeCorrectedData(array $mainData, array $correctedData): array
     {
-        // Ajouter toutes les lignes corrigées à la suite des lignes valides
         return array_merge($mainData, $correctedData);
+    }
+
+    public function getColumnLettersFromFirstRow(array $filteredData): array
+    {
+        if (empty($filteredData)) {
+            return [];
+        }
+    
+        // Récupérer la première ligne du tableau
+        $firstRow = reset($filteredData);
+    
+        // Compter le nombre de colonnes
+        $columnCount = count($firstRow['RowData']);
+    
+        // Générer les lettres dynamiquement
+        $letters = [];
+        for ($i = 0; $i < $columnCount; $i++) {
+            $letters[] = $this->getExcelColumnName($i);
+        }
+    
+        return $letters;
     }    
+        private function getExcelColumnName(int $index): string
+    {
+        $letters = '';
+        while ($index >= 0) {
+            $letters = chr(($index % 26) + 65) . $letters;
+            $index = floor($index / 26) - 1;
+        }
+        return $letters;
+    }
 }
